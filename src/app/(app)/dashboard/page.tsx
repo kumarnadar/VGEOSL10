@@ -183,7 +183,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-5 animate-stagger">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 animate-stagger">
         <DashboardCard
           title="Total Rocks"
           value={totalRocks}
