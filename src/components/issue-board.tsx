@@ -10,9 +10,10 @@ import { useState } from 'react'
 
 interface IssueBoardProps {
   groupId: string
+  showClosed?: boolean
 }
 
-export function IssueBoard({ groupId }: IssueBoardProps) {
+export function IssueBoard({ groupId, showClosed = true }: IssueBoardProps) {
   const supabase = createClient()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -103,7 +104,7 @@ export function IssueBoard({ groupId }: IssueBoardProps) {
         </div>
       ))}
 
-      {closedIssues.length > 0 && (
+      {showClosed && closedIssues.length > 0 && (
         <details className="mt-4">
           <summary className="text-sm text-muted-foreground cursor-pointer">
             {closedIssues.length} closed issue{closedIssues.length !== 1 ? 's' : ''}

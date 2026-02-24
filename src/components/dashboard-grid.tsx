@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type AccentColor = 'blue' | 'green' | 'red' | 'amber'
@@ -11,6 +13,7 @@ interface DashboardCardProps {
   icon?: React.ReactNode
   accent?: AccentColor
   progress?: number
+  href?: string
 }
 
 const accentBorderMap: Record<AccentColor, string> = {
@@ -27,20 +30,23 @@ const accentProgressMap: Record<AccentColor, string> = {
   amber: 'bg-amber-500',
 }
 
-export function DashboardCard({ title, value, subtitle, icon, accent, progress }: DashboardCardProps) {
+export function DashboardCard({ title, value, subtitle, icon, accent, progress, href }: DashboardCardProps) {
   const borderClass = accent ? `border-l-4 ${accentBorderMap[accent]}` : ''
   const progressBarColor = accent ? accentProgressMap[accent] : 'bg-primary'
 
-  return (
-    <Card className={`card-hover animate-fade-in ${borderClass}`}>
+  const cardContent = (
+    <Card className={`card-hover animate-fade-in ${borderClass} ${href ? 'cursor-pointer group' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-          {icon && <span className="text-muted-foreground">{icon}</span>}
+          <div className="flex items-center gap-1">
+            {icon && <span className="text-muted-foreground">{icon}</span>}
+            {href && <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-bold">{value}</p>
+        <p className={`text-2xl font-bold ${href ? 'group-hover:underline decoration-primary/30 underline-offset-4' : ''}`}>{value}</p>
         {progress !== undefined && (
           <div className="mt-2 h-1.5 w-full rounded-full bg-muted">
             <div
@@ -53,10 +59,17 @@ export function DashboardCard({ title, value, subtitle, icon, accent, progress }
       </CardContent>
     </Card>
   )
+
+  if (href) {
+    return <Link href={href}>{cardContent}</Link>
+  }
+
+  return cardContent
 }
 
 interface RocksByGroupRow {
   groupName: string
+  groupId?: string
   total: number
   onTrack: number
   offTrack: number
@@ -84,15 +97,29 @@ export function RocksByGroupTable({ data }: { data: RocksByGroupRow[] }) {
             <tbody>
               {data.map((row) => (
                 <tr key={row.groupName} className="border-b hover:bg-muted/50">
-                  <td className="py-2">{row.groupName}</td>
+                  <td className="py-2">
+                    {row.groupId ? (
+                      <Link href={`/groups/${row.groupId}/rocks`} className="hover:underline text-primary">
+                        {row.groupName}
+                      </Link>
+                    ) : row.groupName}
+                  </td>
                   <td className="text-right py-2">{row.total}</td>
                   <td className="text-right py-2 text-green-600">
                     <span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1" />
-                    {row.onTrack}
+                    {row.groupId ? (
+                      <Link href={`/groups/${row.groupId}/rocks?status=on_track`} className="hover:underline">
+                        {row.onTrack}
+                      </Link>
+                    ) : row.onTrack}
                   </td>
                   <td className="text-right py-2 text-red-600">
                     <span className="inline-block h-2 w-2 rounded-full bg-red-500 mr-1" />
-                    {row.offTrack}
+                    {row.groupId ? (
+                      <Link href={`/groups/${row.groupId}/rocks?status=off_track`} className="hover:underline">
+                        {row.offTrack}
+                      </Link>
+                    ) : row.offTrack}
                   </td>
                   <td className="text-right py-2 font-medium">{row.pctOnTrack}</td>
                 </tr>
@@ -108,6 +135,8 @@ export function RocksByGroupTable({ data }: { data: RocksByGroupRow[] }) {
 
 interface RocksByPersonRow {
   personName: string
+  ownerId?: string
+  groupId?: string
   total: number
   onTrack: number
   offTrack: number
@@ -133,7 +162,13 @@ export function RocksByPersonTable({ data }: { data: RocksByPersonRow[] }) {
             <tbody>
               {data.map((row) => (
                 <tr key={row.personName} className="border-b hover:bg-muted/50">
-                  <td className="py-2">{row.personName}</td>
+                  <td className="py-2">
+                    {row.groupId && row.ownerId ? (
+                      <Link href={`/groups/${row.groupId}/rocks?owner=${row.ownerId}`} className="hover:underline text-primary">
+                        {row.personName}
+                      </Link>
+                    ) : row.personName}
+                  </td>
                   <td className="text-right py-2">{row.total}</td>
                   <td className="text-right py-2 text-green-600">
                     <span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1" />

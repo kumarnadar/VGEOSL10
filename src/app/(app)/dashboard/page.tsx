@@ -1,18 +1,24 @@
 'use client'
 
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import useSWR from 'swr'
 import { useQuarters } from '@/hooks/use-rocks'
+import { useUser } from '@/hooks/use-user'
 import { DashboardCard, RocksByGroupTable, RocksByPersonTable } from '@/components/dashboard-grid'
 import { QuarterSelector } from '@/components/quarter-selector'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useState, useEffect } from 'react'
 import { Target, TrendingUp, AlertCircle, Star, LayoutDashboard } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 
 export default function DashboardPage() {
   const supabase = createClient()
+  const { user } = useUser()
+  const groups = user?.group_members?.map((gm: any) => gm.groups) || []
   const { data: quarters } = useQuarters()
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null)
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
 
   useEffect(() => {
     if (quarters && !selectedQuarter) {
@@ -23,40 +29,59 @@ export default function DashboardPage() {
   }, [quarters, selectedQuarter])
 
   const { data: rocks } = useSWR(
-    selectedQuarter ? `dashboard-rocks-${selectedQuarter}` : null,
+    selectedQuarter ? `dashboard-rocks-${selectedQuarter}-${selectedGroupId || 'all'}` : null,
     async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('rocks')
-        .select('*, owner:profiles!owner_id(full_name), group:groups!group_id(name)')
+        .select('*, owner:profiles!owner_id(id, full_name), group:groups!group_id(id, name)')
         .eq('quarter_id', selectedQuarter!)
         .eq('is_archived', false)
+      if (selectedGroupId) {
+        query = query.eq('group_id', selectedGroupId)
+      }
+      const { data } = await query
       return data || []
     }
   )
 
-  const { data: openIssueCount } = useSWR('dashboard-issues', async () => {
-    const { count } = await supabase
-      .from('issues')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_archived', false)
-      .neq('status', 'closed')
-    return count || 0
-  })
+  const { data: openIssueCount } = useSWR(
+    `dashboard-issues-${selectedGroupId || 'all'}`,
+    async () => {
+      let query = supabase
+        .from('issues')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_archived', false)
+        .neq('status', 'closed')
+      if (selectedGroupId) {
+        query = query.eq('group_id', selectedGroupId)
+      }
+      const { count } = await query
+      return count || 0
+    }
+  )
 
-  const { data: recentMeetings } = useSWR('dashboard-meetings', async () => {
-    const { data } = await supabase
-      .from('meetings')
-      .select('meeting_date, average_score, group:groups!group_id(name)')
-      .order('meeting_date', { ascending: false })
-      .limit(5)
-    return data || []
-  })
+  const { data: recentMeetings } = useSWR(
+    `dashboard-meetings-${selectedGroupId || 'all'}`,
+    async () => {
+      let query = supabase
+        .from('meetings')
+        .select('id, meeting_date, average_score, group_id, group:groups!group_id(name)')
+        .order('meeting_date', { ascending: false })
+        .limit(5)
+      if (selectedGroupId) {
+        query = query.eq('group_id', selectedGroupId)
+      }
+      const { data } = await query
+      return data || []
+    }
+  )
 
   // Aggregate rocks by group
-  const rocksByGroup: Record<string, { groupName: string; total: number; onTrack: number; offTrack: number }> = {}
+  const rocksByGroup: Record<string, { groupName: string; groupId: string; total: number; onTrack: number; offTrack: number }> = {}
   rocks?.forEach((rock: any) => {
     const name = rock.group?.name || 'Unknown'
-    if (!rocksByGroup[name]) rocksByGroup[name] = { groupName: name, total: 0, onTrack: 0, offTrack: 0 }
+    const gid = rock.group?.id || ''
+    if (!rocksByGroup[name]) rocksByGroup[name] = { groupName: name, groupId: gid, total: 0, onTrack: 0, offTrack: 0 }
     rocksByGroup[name].total++
     if (rock.status === 'on_track') rocksByGroup[name].onTrack++
     else rocksByGroup[name].offTrack++
@@ -67,10 +92,12 @@ export default function DashboardPage() {
   }))
 
   // Aggregate rocks by person
-  const rocksByPerson: Record<string, { personName: string; total: number; onTrack: number; offTrack: number }> = {}
+  const rocksByPerson: Record<string, { personName: string; ownerId: string; groupId: string; total: number; onTrack: number; offTrack: number }> = {}
   rocks?.forEach((rock: any) => {
     const name = rock.owner?.full_name || 'Unknown'
-    if (!rocksByPerson[name]) rocksByPerson[name] = { personName: name, total: 0, onTrack: 0, offTrack: 0 }
+    const oid = rock.owner?.id || ''
+    const gid = selectedGroupId || rock.group?.id || ''
+    if (!rocksByPerson[name]) rocksByPerson[name] = { personName: name, ownerId: oid, groupId: gid, total: 0, onTrack: 0, offTrack: 0 }
     rocksByPerson[name].total++
     if (rock.status === 'on_track') rocksByPerson[name].onTrack++
     else rocksByPerson[name].offTrack++
@@ -89,7 +116,20 @@ export default function DashboardPage() {
           <LayoutDashboard className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-semibold">Dashboard</h1>
         </div>
-        <QuarterSelector value={selectedQuarter} onChange={setSelectedQuarter} />
+        <div className="flex items-center gap-2">
+          <Select value={selectedGroupId || 'all'} onValueChange={(v) => setSelectedGroupId(v === 'all' ? null : v)}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="All Groups" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Groups</SelectItem>
+              {groups.map((g: any) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <QuarterSelector value={selectedQuarter} onChange={setSelectedQuarter} />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4 animate-stagger">
@@ -98,6 +138,7 @@ export default function DashboardPage() {
           value={totalRocks}
           icon={<Target className="h-5 w-5" />}
           accent="blue"
+          href={selectedGroupId ? `/groups/${selectedGroupId}/rocks` : undefined}
         />
         <DashboardCard
           title="On Track"
@@ -106,12 +147,14 @@ export default function DashboardPage() {
           icon={<TrendingUp className="h-5 w-5" />}
           accent="green"
           progress={onTrackPct}
+          href={selectedGroupId ? `/groups/${selectedGroupId}/rocks?status=on_track` : undefined}
         />
         <DashboardCard
           title="Open Issues"
           value={openIssueCount || 0}
           icon={<AlertCircle className="h-5 w-5" />}
           accent="red"
+          href={selectedGroupId ? `/groups/${selectedGroupId}/issues` : undefined}
         />
         <DashboardCard
           title="Last Meeting Score"
@@ -119,11 +162,12 @@ export default function DashboardPage() {
           subtitle={(recentMeetings?.[0]?.group as any)?.name}
           icon={<Star className="h-5 w-5" />}
           accent="amber"
+          href={selectedGroupId && recentMeetings?.[0] ? `/groups/${selectedGroupId}/meetings/${(recentMeetings[0] as any).id}` : undefined}
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2 animate-stagger">
-        <RocksByGroupTable data={rocksByGroupData} />
+      <div className={`grid gap-6 ${selectedGroupId ? '' : 'lg:grid-cols-2'} animate-stagger`}>
+        {!selectedGroupId && <RocksByGroupTable data={rocksByGroupData} />}
         <RocksByPersonTable data={rocksByPersonData} />
       </div>
 
@@ -132,10 +176,14 @@ export default function DashboardPage() {
           <h3 className="font-semibold mb-3">Recent Meetings</h3>
           <div className="space-y-2 table-striped">
             {recentMeetings.map((m: any, i: number) => (
-              <div key={i} className="flex items-center justify-between text-sm border-b pb-2 hover:bg-muted/50 rounded-md px-2 -mx-2">
-                <span>{m.meeting_date} - {m.group?.name}</span>
-                <span className="font-medium">{m.average_score ? `${Number(m.average_score).toFixed(1)}/10` : 'No scores'}</span>
-              </div>
+              <Link
+                key={i}
+                href={`/groups/${(m as any).group_id}/meetings/${(m as any).id}`}
+                className="flex items-center justify-between text-sm border-b pb-2 hover:bg-muted/50 rounded-md px-2 -mx-2"
+              >
+                <span>{m.meeting_date} - {(m as any).group?.name}</span>
+                <span className="font-medium">{(m as any).average_score ? `${Number((m as any).average_score).toFixed(1)}/10` : 'No scores'}</span>
+              </Link>
             ))}
           </div>
         </Card>
