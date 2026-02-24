@@ -74,7 +74,7 @@ export default function RocksPage() {
           <Target className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-semibold">Rocks</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Select
             value={ownerFilter || 'all'}
             onValueChange={(v) => setOwnerFilter(v === 'all' ? null : v)}

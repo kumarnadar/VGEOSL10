@@ -70,7 +70,7 @@ export default function AdminQuartersPage() {
       </div>
 
       <div className="overflow-x-auto">
-      <Table>
+      <Table className="min-w-[500px]">
         <TableHeader>
           <TableRow>
             <TableHead>Quarter</TableHead>
@@ -83,9 +83,9 @@ export default function AdminQuartersPage() {
         <TableBody>
           {quarters?.map((q: any) => (
             <TableRow key={q.id}>
-              <TableCell className="font-medium">{q.label}</TableCell>
-              <TableCell>{q.start_date}</TableCell>
-              <TableCell>{q.end_date}</TableCell>
+              <TableCell className="font-medium whitespace-nowrap">{q.label}</TableCell>
+              <TableCell className="whitespace-nowrap">{q.start_date}</TableCell>
+              <TableCell className="whitespace-nowrap">{q.end_date}</TableCell>
               <TableCell>
                 {q.is_current ? <Badge>Current</Badge> : <Badge variant="outline">Past</Badge>}
               </TableCell>
