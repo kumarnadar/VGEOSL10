@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-type AccentColor = 'blue' | 'green' | 'red' | 'amber'
+type AccentColor = 'blue' | 'green' | 'red' | 'amber' | 'purple'
 
 interface DashboardCardProps {
   title: string
@@ -14,6 +14,7 @@ interface DashboardCardProps {
   accent?: AccentColor
   progress?: number
   href?: string
+  onClick?: () => void
 }
 
 const accentBorderMap: Record<AccentColor, string> = {
@@ -21,6 +22,7 @@ const accentBorderMap: Record<AccentColor, string> = {
   green: 'border-l-green-500',
   red: 'border-l-destructive',
   amber: 'border-l-amber-500',
+  purple: 'border-l-purple-500',
 }
 
 const accentProgressMap: Record<AccentColor, string> = {
@@ -28,14 +30,16 @@ const accentProgressMap: Record<AccentColor, string> = {
   green: 'bg-green-500',
   red: 'bg-destructive',
   amber: 'bg-amber-500',
+  purple: 'bg-purple-500',
 }
 
-export function DashboardCard({ title, value, subtitle, icon, accent, progress, href }: DashboardCardProps) {
+export function DashboardCard({ title, value, subtitle, icon, accent, progress, href, onClick }: DashboardCardProps) {
   const borderClass = accent ? `border-l-4 ${accentBorderMap[accent]}` : ''
   const progressBarColor = accent ? accentProgressMap[accent] : 'bg-primary'
+  const isClickable = !!(href || onClick)
 
   const cardContent = (
-    <Card className={`card-hover animate-fade-in ${borderClass} ${href ? 'cursor-pointer group' : ''}`}>
+    <Card className={`card-hover animate-fade-in ${borderClass} ${isClickable ? 'cursor-pointer group' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -46,7 +50,7 @@ export function DashboardCard({ title, value, subtitle, icon, accent, progress, 
         </div>
       </CardHeader>
       <CardContent>
-        <p className={`text-2xl font-bold ${href ? 'group-hover:underline decoration-primary/30 underline-offset-4' : ''}`}>{value}</p>
+        <p className={`text-2xl font-bold ${isClickable ? 'group-hover:underline decoration-primary/30 underline-offset-4' : ''}`}>{value}</p>
         {progress !== undefined && (
           <div className="mt-2 h-1.5 w-full rounded-full bg-muted">
             <div
@@ -62,6 +66,10 @@ export function DashboardCard({ title, value, subtitle, icon, accent, progress, 
 
   if (href) {
     return <Link href={href}>{cardContent}</Link>
+  }
+
+  if (onClick) {
+    return <div onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onClick()}>{cardContent}</div>
   }
 
   return cardContent

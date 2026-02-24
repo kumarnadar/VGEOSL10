@@ -9,8 +9,9 @@ import { DashboardCard, RocksByGroupTable, RocksByPersonTable } from '@/componen
 import { QuarterSelector } from '@/components/quarter-selector'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useState, useEffect } from 'react'
-import { Target, TrendingUp, AlertCircle, Star, LayoutDashboard } from 'lucide-react'
+import { Target, TrendingUp, AlertCircle, Star, LayoutDashboard, ListChecks } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { Top10ReviewDialog } from '@/components/top10-review-dialog'
 
 export default function DashboardPage() {
   const supabase = createClient()
@@ -19,6 +20,15 @@ export default function DashboardPage() {
   const { data: quarters } = useQuarters()
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+  const [top10DialogOpen, setTop10DialogOpen] = useState(false)
+
+  // Compute current week Monday
+  const currentWeekMonday = (() => {
+    const today = new Date()
+    const monday = new Date(today)
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+    return monday.toISOString().split('T')[0]
+  })()
 
   useEffect(() => {
     if (quarters && !selectedQuarter) {
@@ -76,6 +86,21 @@ export default function DashboardPage() {
     }
   )
 
+  const { data: focusSnapshots } = useSWR(
+    `dashboard-focus-${currentWeekMonday}-${selectedGroupId || 'all'}`,
+    async () => {
+      let query = supabase
+        .from('focus_snapshots')
+        .select('*, user:profiles!user_id(id, full_name), group:groups!group_id(id, name), focus_items(*)')
+        .eq('week_date', currentWeekMonday)
+      if (selectedGroupId) {
+        query = query.eq('group_id', selectedGroupId)
+      }
+      const { data } = await query
+      return data || []
+    }
+  )
+
   // Aggregate rocks by group
   const rocksByGroup: Record<string, { groupName: string; groupId: string; total: number; onTrack: number; offTrack: number }> = {}
   rocks?.forEach((rock: any) => {
@@ -109,6 +134,32 @@ export default function DashboardPage() {
   const onTrackPct = totalRocks > 0 ? Math.round((onTrackRocks / totalRocks) * 100) : 0
   const pctOnTrack = totalRocks > 0 ? `${onTrackPct}%` : '-'
 
+  // Top 10 items count
+  const top10ItemCount = focusSnapshots?.reduce(
+    (sum: number, snap: any) => sum + (snap.focus_items?.length || 0), 0
+  ) || 0
+
+  // Prepare dialog snapshots
+  const top10DialogSnapshots = (focusSnapshots || []).map((snap: any) => ({
+    userName: snap.user?.full_name || 'Unknown',
+    groupName: snap.group?.name || 'Unknown',
+    items: (snap.focus_items || [])
+      .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+      .map((item: any) => ({
+        id: item.id,
+        priority: item.priority,
+        company_subject: item.company_subject,
+        prospect_value: item.prospect_value,
+        pipeline_status: item.pipeline_status,
+        location: item.location,
+        key_decision_maker: item.key_decision_maker,
+        weekly_action: item.weekly_action,
+        obstacles: item.obstacles,
+        resources_needed: item.resources_needed,
+        strategy: item.strategy,
+      })),
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -132,7 +183,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4 animate-stagger">
+      <div className="grid gap-4 md:grid-cols-5 animate-stagger">
         <DashboardCard
           title="Total Rocks"
           value={totalRocks}
@@ -164,6 +215,13 @@ export default function DashboardPage() {
           accent="amber"
           href={selectedGroupId && recentMeetings?.[0] ? `/groups/${selectedGroupId}/meetings/${(recentMeetings[0] as any).id}` : undefined}
         />
+        <DashboardCard
+          title="Top 10 Items"
+          value={top10ItemCount}
+          icon={<ListChecks className="h-5 w-5" />}
+          accent="purple"
+          onClick={() => setTop10DialogOpen(true)}
+        />
       </div>
 
       <div className={`grid gap-6 ${selectedGroupId ? '' : 'lg:grid-cols-2'} animate-stagger`}>
@@ -188,6 +246,15 @@ export default function DashboardPage() {
           </div>
         </Card>
       )}
+
+      <Top10ReviewDialog
+        open={top10DialogOpen}
+        onOpenChange={setTop10DialogOpen}
+        title={selectedGroupId
+          ? `Top 10 Review — ${groups.find((g: any) => g.id === selectedGroupId)?.name || 'Group'}`
+          : 'Top 10 Review — All Groups'}
+        snapshots={top10DialogSnapshots}
+      />
     </div>
   )
 }
