@@ -84,10 +84,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col">
       {/* Header with user info */}
       <div className="p-4 border-b">
-        <h1 className="text-xl font-bold text-primary font-[family-name:var(--font-montserrat)]">
-          EOS L10
-        </h1>
-        <p className="text-xs text-muted-foreground">Platform</p>
+        <div className="flex items-center gap-2.5">
+          <Image src="/vg-mark.svg" alt="Value Global" width={28} height={28} className="shrink-0" />
+          <div>
+            <h1 className="text-lg font-bold text-primary font-[family-name:var(--font-montserrat)] leading-tight">
+              EOS L10
+            </h1>
+            <p className="text-[10px] text-muted-foreground leading-tight">Platform</p>
+          </div>
+        </div>
         <div className="mt-2 flex items-center gap-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
             {userInitials}
