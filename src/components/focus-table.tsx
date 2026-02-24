@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/client'
 import { mutate } from 'swr'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Trash2, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 interface FocusTableProps {
@@ -14,17 +16,15 @@ interface FocusTableProps {
   ownerName?: string
 }
 
-const COLUMNS = [
-  { key: 'priority', label: 'Priority', width: 'w-20' },
-  { key: 'company_subject', label: 'Company/Subject', width: 'w-40' },
-  { key: 'location', label: 'Location', width: 'w-24' },
-  { key: 'prospect_value', label: 'Value', width: 'w-24' },
-  { key: 'pipeline_status', label: 'Pipeline', width: 'w-28' },
-  { key: 'key_decision_maker', label: 'KDM', width: 'w-28' },
-  { key: 'weekly_action', label: 'Weekly Action', width: 'w-40' },
-  { key: 'obstacles', label: 'Obstacles', width: 'w-32' },
-  { key: 'resources_needed', label: 'Resources', width: 'w-32' },
-  { key: 'strategy', label: 'Strategy', width: 'w-32' },
+const DETAIL_FIELDS = [
+  { key: 'location', label: 'Location' },
+  { key: 'prospect_value', label: 'Value' },
+  { key: 'pipeline_status', label: 'Pipeline Status' },
+  { key: 'key_decision_maker', label: 'Key Decision Maker' },
+  { key: 'weekly_action', label: 'Weekly Action' },
+  { key: 'obstacles', label: 'Obstacles' },
+  { key: 'resources_needed', label: 'Resources Needed' },
+  { key: 'strategy', label: 'Strategy' },
 ]
 
 export function FocusTable({ snapshot, readOnly = false, showOwner = false, ownerName }: FocusTableProps) {
@@ -57,61 +57,94 @@ export function FocusTable({ snapshot, readOnly = false, showOwner = false, owne
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {showOwner && ownerName && (
-        <h3 className="font-semibold text-sm">{ownerName}</h3>
+        <h3 className="font-semibold">{ownerName}</h3>
       )}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {COLUMNS.map((col) => (
-                <TableHead key={col.key} className={col.width}>{col.label}</TableHead>
-              ))}
-              {!readOnly && <TableHead className="w-16"></TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item: any) => (
-              <TableRow key={item.id}>
-                {COLUMNS.map((col) => (
-                  <TableCell key={col.key}>
+
+      <div className="space-y-3 animate-stagger">
+        {items.map((item: any, index: number) => (
+          <Card key={item.id} className="card-hover animate-fade-in">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Badge variant="outline" className="shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold">
+                    {item.priority || index + 1}
+                  </Badge>
+                  {readOnly ? (
+                    <h4 className="font-semibold text-base break-words">{item.company_subject || 'Untitled'}</h4>
+                  ) : (
+                    <Input
+                      defaultValue={item.company_subject ?? ''}
+                      onBlur={(e) => {
+                        if (e.target.value !== (item.company_subject ?? '')) {
+                          updateItem(item.id, 'company_subject', e.target.value)
+                        }
+                      }}
+                      className="font-semibold text-base h-9"
+                      placeholder="Company / Subject"
+                    />
+                  )}
+                </div>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteItem(item.id)}
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {DETAIL_FIELDS.map((field) => (
+                  <div key={field.key} className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      {field.label}
+                    </label>
                     {readOnly ? (
-                      <span className="text-sm">{item[col.key] ?? '-'}</span>
+                      <p className="text-sm break-words whitespace-pre-wrap min-h-[24px]">
+                        {item[field.key] || <span className="text-muted-foreground">-</span>}
+                      </p>
                     ) : (
                       <Input
-                        defaultValue={item[col.key] ?? ''}
+                        defaultValue={item[field.key] ?? ''}
                         onBlur={(e) => {
-                          if (e.target.value !== (item[col.key] ?? '')) {
-                            updateItem(item.id, col.key, e.target.value)
+                          if (e.target.value !== (item[field.key] ?? '')) {
+                            updateItem(item.id, field.key, e.target.value)
                           }
                         }}
-                        className="h-7 text-sm"
+                        className="h-8 text-sm"
+                        placeholder={field.label}
                       />
                     )}
-                  </TableCell>
+                  </div>
                 ))}
-                {!readOnly && (
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => deleteItem(item.id)} className="h-6 text-destructive">
-                      ×
-                    </Button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      {items.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">No focus items for this week.</p>
+      )}
+
       {!readOnly && (
         <div className="flex gap-2">
           <Input
-            placeholder="New company/subject..."
+            placeholder="Add new company/subject..."
             value={newSubject}
             onChange={(e) => setNewSubject(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addItem()}
           />
-          <Button onClick={addItem} disabled={!newSubject.trim()} size="sm">Add</Button>
+          <Button onClick={addItem} disabled={!newSubject.trim()} size="sm" className="gap-1">
+            <Plus className="h-4 w-4" />
+            Add
+          </Button>
         </div>
       )}
     </div>
