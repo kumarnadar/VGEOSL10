@@ -2,10 +2,13 @@
 
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { Target } from 'lucide-react'
 import { useRocks, useQuarters } from '@/hooks/use-rocks'
 import { QuarterSelector } from '@/components/quarter-selector'
 import { RockCard } from '@/components/rock-card'
 import { CreateRockDialog } from '@/components/create-rock-dialog'
+import { CardSkeleton } from '@/components/page-skeleton'
+import { EmptyState } from '@/components/empty-state'
 
 export default function RocksPage() {
   const params = useParams()
@@ -30,7 +33,10 @@ export default function RocksPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Rocks</h1>
+        <div className="flex items-center gap-3">
+          <Target className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Rocks</h1>
+        </div>
         <div className="flex items-center gap-2">
           {isCurrentQuarter && <CreateRockDialog groupId={groupId} />}
           <QuarterSelector value={selectedQuarter} onChange={setSelectedQuarter} />
@@ -42,11 +48,19 @@ export default function RocksPage() {
       )}
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading rocks...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-stagger">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
       ) : rocks?.length === 0 ? (
-        <p className="text-muted-foreground">No rocks for this quarter yet.</p>
+        <EmptyState
+          icon={<Target className="h-7 w-7" />}
+          title="No rocks yet"
+          description="Create your first rock to start tracking quarterly priorities for this group."
+        />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-stagger">
           {rocks?.map((rock: any) => (
             <RockCard
               key={rock.id}

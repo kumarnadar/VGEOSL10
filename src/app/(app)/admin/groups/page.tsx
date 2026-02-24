@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { UserPicker } from '@/components/user-picker'
+import { Layers } from 'lucide-react'
 import { useState } from 'react'
 
 export default function AdminGroupsPage() {
@@ -46,7 +47,10 @@ export default function AdminGroupsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Groups</h1>
+        <div className="flex items-center gap-3">
+          <Layers className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Groups</h1>
+        </div>
         <Dialog>
           <DialogTrigger asChild>
             <Button>Create Group</Button>

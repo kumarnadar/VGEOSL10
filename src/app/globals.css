@@ -7,7 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-montserrat);
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-montserrat);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -123,4 +124,86 @@
   body {
     @apply bg-background text-foreground;
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-montserrat), sans-serif;
+  }
+}
+
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out forwards;
+}
+
+.animate-stagger > * {
+  opacity: 0;
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.animate-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.animate-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.animate-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.animate-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.animate-stagger > *:nth-child(6) { animation-delay: 300ms; }
+.animate-stagger > *:nth-child(7) { animation-delay: 360ms; }
+.animate-stagger > *:nth-child(8) { animation-delay: 420ms; }
+
+/* Table polish */
+.table-striped tbody tr:nth-child(even) {
+  background-color: oklch(0.97 0 0);
+}
+
+.dark .table-striped tbody tr:nth-child(even) {
+  background-color: oklch(0.22 0 0);
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px oklch(0 0 0 / 0.1), 0 4px 10px -6px oklch(0 0 0 / 0.1);
+}
+
+/* Geometric pattern for login */
+.geo-pattern {
+  background-image:
+    linear-gradient(30deg, oklch(1 0 0 / 0.04) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 0.04) 87.5%, oklch(1 0 0 / 0.04)),
+    linear-gradient(150deg, oklch(1 0 0 / 0.04) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 0.04) 87.5%, oklch(1 0 0 / 0.04)),
+    linear-gradient(30deg, oklch(1 0 0 / 0.04) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 0.04) 87.5%, oklch(1 0 0 / 0.04)),
+    linear-gradient(150deg, oklch(1 0 0 / 0.04) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 0.04) 87.5%, oklch(1 0 0 / 0.04)),
+    linear-gradient(60deg, oklch(1 0 0 / 0.06) 25%, transparent 25.5%, transparent 75%, oklch(1 0 0 / 0.06) 75%, oklch(1 0 0 / 0.06)),
+    linear-gradient(60deg, oklch(1 0 0 / 0.06) 25%, transparent 25.5%, transparent 75%, oklch(1 0 0 / 0.06) 75%, oklch(1 0 0 / 0.06));
+  background-size: 40px 70px;
+  background-position: 0 0, 0 0, 20px 35px, 20px 35px, 0 0, 20px 35px;
 }

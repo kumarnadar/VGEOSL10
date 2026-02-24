@@ -116,7 +116,7 @@ export default function MeetingViewPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Top 10 Review</h2>
             <p className="text-sm text-muted-foreground">Review group focus items for this week.</p>
-            <p className="text-sm text-muted-foreground">Navigate to Focus Tracker for detailed view.</p>
+            <p className="text-sm text-muted-foreground">Navigate to Top 10 for detailed view.</p>
           </div>
         )}
 

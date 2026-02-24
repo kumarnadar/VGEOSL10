@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { CalendarDays } from 'lucide-react'
 import { useState } from 'react'
 
 export default function AdminQuartersPage() {
@@ -37,7 +38,10 @@ export default function AdminQuartersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Quarters</h1>
+        <div className="flex items-center gap-3">
+          <CalendarDays className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Quarters</h1>
+        </div>
         <Dialog>
           <DialogTrigger asChild>
             <Button>Create Quarter</Button>

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Users } from 'lucide-react'
 import { useState } from 'react'
 
 export default function AdminUsersPage() {
@@ -49,7 +50,10 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Users</h1>
+        <div className="flex items-center gap-3">
+          <Users className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Users</h1>
+        </div>
         <Dialog>
           <DialogTrigger asChild>
             <Button>Invite User</Button>
@@ -73,6 +77,7 @@ export default function AdminUsersPage() {
         </Dialog>
       </div>
 
+      <div className="table-striped">
       <Table>
         <TableHeader>
           <TableRow>
@@ -84,7 +89,7 @@ export default function AdminUsersPage() {
         </TableHeader>
         <TableBody>
           {users?.map((user: any) => (
-            <TableRow key={user.id}>
+            <TableRow key={user.id} className="hover:bg-muted/50">
               <TableCell>{user.full_name}</TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>{user.geography || '-'}</TableCell>
@@ -105,6 +110,7 @@ export default function AdminUsersPage() {
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   )
 }

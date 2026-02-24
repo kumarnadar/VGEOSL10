@@ -2,11 +2,14 @@
 
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import useSWR from 'swr'
 import { CreateMeetingButton } from '@/components/create-meeting-dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { TableSkeleton } from '@/components/page-skeleton'
+import { EmptyState } from '@/components/empty-state'
 
 export default function MeetingsPage() {
   const params = useParams()
@@ -26,15 +29,25 @@ export default function MeetingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Meetings</h1>
+        <div className="flex items-center gap-3">
+          <Calendar className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Meetings</h1>
+        </div>
         <CreateMeetingButton groupId={groupId} />
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading meetings...</p>
+        <div className="space-y-3 animate-stagger">
+          <TableSkeleton rows={4} />
+        </div>
       ) : meetings?.length === 0 ? (
-        <p className="text-muted-foreground">No meetings yet. Start your first L10 meeting.</p>
+        <EmptyState
+          icon={<Calendar className="h-7 w-7" />}
+          title="No meetings yet"
+          description="Start your first L10 meeting to begin tracking team alignment and accountability."
+        />
       ) : (
+        <div className="table-striped">
         <Table>
           <TableHeader>
             <TableRow>
@@ -46,7 +59,7 @@ export default function MeetingsPage() {
           </TableHeader>
           <TableBody>
             {meetings?.map((meeting: any) => (
-              <TableRow key={meeting.id}>
+              <TableRow key={meeting.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium">{meeting.meeting_date}</TableCell>
                 <TableCell>{meeting.meeting_attendees?.length || 0}</TableCell>
                 <TableCell>
@@ -66,6 +79,7 @@ export default function MeetingsPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
     </div>
   )

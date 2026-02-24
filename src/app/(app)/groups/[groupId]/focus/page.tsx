@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { ListChecks } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { useFocusSnapshot, useGroupFocusSnapshots, useWeekDates } from '@/hooks/use-focus'
@@ -10,6 +11,8 @@ import { FocusTable } from '@/components/focus-table'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { mutate } from 'swr'
+import { TableSkeleton } from '@/components/page-skeleton'
+import { EmptyState } from '@/components/empty-state'
 
 export default function FocusPage() {
   const params = useParams()
@@ -75,14 +78,29 @@ export default function FocusPage() {
     setWeekIndex(0)
   }
 
-  if (!user) return <p className="text-muted-foreground">Loading...</p>
+  if (!user) return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <ListChecks className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-semibold">Top 10</h1>
+      </div>
+      <TableSkeleton rows={5} />
+    </div>
+  )
 
   if (!weekDates || weekDates.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Focus Tracker</h1>
-        <p className="text-muted-foreground">No focus weeks created yet.</p>
-        <Button onClick={handleCreateFirstSnapshot}>Create First Week</Button>
+        <div className="flex items-center gap-3">
+          <ListChecks className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Top 10</h1>
+        </div>
+        <EmptyState
+          icon={<ListChecks className="h-7 w-7" />}
+          title="No focus weeks yet"
+          description="Create your first week to start tracking your top 10 priorities."
+          action={{ label: 'Create First Week', onClick: handleCreateFirstSnapshot }}
+        />
       </div>
     )
   }
@@ -90,7 +108,10 @@ export default function FocusPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Focus Tracker</h1>
+        <div className="flex items-center gap-3">
+          <ListChecks className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Top 10</h1>
+        </div>
         <WeekNavigator
           weekDates={weekDates}
           currentIndex={weekIndex}
@@ -110,7 +131,11 @@ export default function FocusPage() {
           {mySnapshot ? (
             <FocusTable snapshot={mySnapshot} readOnly={!isCurrentWeek} />
           ) : (
-            <p className="text-muted-foreground">No focus data for this week.</p>
+            <EmptyState
+              icon={<ListChecks className="h-7 w-7" />}
+              title="No focus data"
+              description="No focus items recorded for this week."
+            />
           )}
         </TabsContent>
 
@@ -125,7 +150,11 @@ export default function FocusPage() {
             />
           ))}
           {(!groupSnapshots || groupSnapshots.length === 0) && (
-            <p className="text-muted-foreground">No group focus data for this week.</p>
+            <EmptyState
+              icon={<ListChecks className="h-7 w-7" />}
+              title="No group data"
+              description="No team members have focus data for this week yet."
+            />
           )}
         </TabsContent>
       </Tabs>

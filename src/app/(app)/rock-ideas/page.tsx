@@ -1,5 +1,6 @@
 'use client'
 
+import { Lightbulb } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import useSWR, { mutate } from 'swr'
 import { useUser } from '@/hooks/use-user'
@@ -8,6 +9,7 @@ import { CreateRockIdeaDialog } from '@/components/create-rock-idea-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CardSkeleton } from '@/components/page-skeleton'
 import { useState } from 'react'
 
 export default function RockIdeasPage() {
@@ -73,7 +75,10 @@ export default function RockIdeasPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Rock Ideas</h1>
+        <div className="flex items-center gap-3">
+          <Lightbulb className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Rock Ideas</h1>
+        </div>
         <div className="flex items-center gap-2">
           {firstGroupId && <CreateRockIdeaDialog groupId={firstGroupId} />}
         </div>
@@ -96,7 +101,11 @@ export default function RockIdeasPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading ideas...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-stagger">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
       ) : (
         <>
           {(['red', 'yellow', 'green'] as const).map((color) => (

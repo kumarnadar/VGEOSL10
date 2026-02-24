@@ -29,7 +29,7 @@ export function RockCard({ rock, groupId, readOnly = false }: RockCardProps) {
   }
 
   return (
-    <Card>
+    <Card className="card-hover animate-fade-in">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <Link href={`/groups/${groupId}/rocks/${rock.id}`} className="hover:underline">
@@ -42,13 +42,23 @@ export function RockCard({ rock, groupId, readOnly = false }: RockCardProps) {
               onClick={toggleStatus}
               className="shrink-0"
             >
-              <Badge variant={rock.status === 'on_track' ? 'default' : 'destructive'}>
+              <Badge
+                variant="outline"
+                className={rock.status === 'on_track'
+                  ? 'bg-green-50 text-green-700 border-green-200'
+                  : 'bg-red-50 text-red-700 border-red-200'}
+              >
                 {rock.status === 'on_track' ? 'On Track' : 'Off Track'}
               </Badge>
             </Button>
           )}
           {readOnly && (
-            <Badge variant={rock.status === 'on_track' ? 'default' : 'destructive'}>
+            <Badge
+              variant="outline"
+              className={rock.status === 'on_track'
+                ? 'bg-green-50 text-green-700 border-green-200'
+                : 'bg-red-50 text-red-700 border-red-200'}
+            >
               {rock.status === 'on_track' ? 'On Track' : 'Off Track'}
             </Badge>
           )}
@@ -63,6 +73,14 @@ export function RockCard({ rock, groupId, readOnly = false }: RockCardProps) {
               : 'No milestones'}
           </span>
         </div>
+        {totalMilestones > 0 && (
+          <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{ width: `${(doneMilestones / totalMilestones) * 100}%` }}
+            />
+          </div>
+        )}
         {rock.completion !== 'in_progress' && (
           <Badge variant="outline" className="mt-2">
             {rock.completion === 'done' ? 'Done' : rock.completion === 'not_done' ? 'Not Done' : 'Rolled Forward'}
