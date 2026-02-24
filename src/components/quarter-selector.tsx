@@ -15,7 +15,7 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
 
   return (
     <Select value={value || undefined} onValueChange={onChange}>
-      <SelectTrigger className="w-48">
+      <SelectTrigger className="w-36 sm:w-48">
         <SelectValue placeholder="Select quarter" />
       </SelectTrigger>
       <SelectContent>

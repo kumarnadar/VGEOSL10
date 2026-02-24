@@ -69,6 +69,7 @@ export default function AdminQuartersPage() {
         </Dialog>
       </div>
 
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -90,7 +91,7 @@ export default function AdminQuartersPage() {
               </TableCell>
               <TableCell>
                 {!q.is_current && (
-                  <Button variant="ghost" size="sm" onClick={() => setCurrentQuarter(q.id)}>
+                  <Button variant="ghost" size="sm" className="whitespace-nowrap" onClick={() => setCurrentQuarter(q.id)}>
                     Set Current
                   </Button>
                 )}
@@ -99,6 +100,7 @@ export default function AdminQuartersPage() {
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   )
 }

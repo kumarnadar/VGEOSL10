@@ -79,7 +79,7 @@ export default function RocksPage() {
             value={ownerFilter || 'all'}
             onValueChange={(v) => setOwnerFilter(v === 'all' ? null : v)}
           >
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-36 sm:w-44">
               <SelectValue placeholder="All Members" />
             </SelectTrigger>
             <SelectContent>

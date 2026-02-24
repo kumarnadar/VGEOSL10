@@ -141,7 +141,7 @@ export default function FocusPage() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={selectedMemberId || ''} onValueChange={setSelectedMemberId}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-36 sm:w-48">
               <SelectValue placeholder="Select member" />
             </SelectTrigger>
             <SelectContent>
