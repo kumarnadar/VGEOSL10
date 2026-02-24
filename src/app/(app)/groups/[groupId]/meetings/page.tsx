@@ -57,7 +57,7 @@ export default function MeetingsPage() {
                 <TableCell>
                   <Link
                     href={`/groups/${groupId}/meetings/${meeting.id}`}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="text-sm text-primary hover:underline"
                   >
                     View
                   </Link>

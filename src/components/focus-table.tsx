@@ -93,7 +93,7 @@ export function FocusTable({ snapshot, readOnly = false, showOwner = false, owne
                 ))}
                 {!readOnly && (
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => deleteItem(item.id)} className="h-6 text-red-500">
+                    <Button variant="ghost" size="sm" onClick={() => deleteItem(item.id)} className="h-6 text-destructive">
                       ×
                     </Button>
                   </TableCell>

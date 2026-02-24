@@ -75,7 +75,7 @@ export function MilestoneList({ rockId, readOnly = false }: MilestoneListProps) 
 
   const statusColors: Record<string, string> = {
     not_started: 'text-gray-500',
-    wip: 'text-blue-600',
+    wip: 'text-primary',
     done: 'text-green-600',
     delayed: 'text-red-600',
   }
@@ -202,7 +202,7 @@ export function MilestoneList({ rockId, readOnly = false }: MilestoneListProps) 
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteMilestone(milestone.id)}
-                    className="h-6 text-red-500 hover:text-red-700"
+                    className="h-6 text-destructive hover:text-destructive/80"
                   >
                     Delete
                   </Button>

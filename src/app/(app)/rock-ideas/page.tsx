@@ -55,7 +55,7 @@ export default function RockIdeasPage() {
   }
 
   const colorConfig: Record<string, { label: string; variant: 'destructive' | 'secondary' | 'outline'; bg: string }> = {
-    red: { label: 'High Priority', variant: 'destructive', bg: 'border-red-200' },
+    red: { label: 'High Priority', variant: 'destructive', bg: 'border-destructive/30' },
     yellow: { label: 'Medium Priority', variant: 'secondary', bg: 'border-yellow-200' },
     green: { label: 'Low Priority', variant: 'outline', bg: 'border-green-200' },
   }
@@ -141,7 +141,7 @@ export default function RockIdeasPage() {
               </summary>
               <div className="mt-2 space-y-2">
                 {promotedIdeas.map((idea: any) => (
-                  <div key={idea.id} className="rounded-lg border bg-gray-50 p-3">
+                  <div key={idea.id} className="rounded-lg border bg-muted p-3">
                     <p className="text-sm">{idea.description}</p>
                     <p className="text-xs text-muted-foreground">Promoted to: {idea.promoted_to_rock?.title}</p>
                   </div>

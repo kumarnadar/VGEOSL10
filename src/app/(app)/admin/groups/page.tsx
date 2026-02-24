@@ -94,7 +94,7 @@ export default function AdminGroupsPage() {
       </div>
 
       {groups?.map((group: any) => (
-        <div key={group.id} className="rounded-lg border bg-white p-4 space-y-3">
+        <div key={group.id} className="rounded-lg border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold">{group.name}</h2>

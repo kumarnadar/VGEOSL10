@@ -44,7 +44,7 @@ export function UserPicker({ value, onChange, placeholder = 'Select user...', al
             <CommandEmpty>
               {allowFreeText && search ? (
                 <button
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-accent"
                   onClick={() => {
                     onChange(null, search)
                     setOpen(false)

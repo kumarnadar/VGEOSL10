@@ -76,7 +76,7 @@ export function TodoList({ groupId }: TodoListProps) {
           </summary>
           <div className="mt-2 space-y-2">
             {doneTodos.map((todo: any) => (
-              <div key={todo.id} className="flex items-start gap-3 rounded-lg border bg-gray-50 p-3">
+              <div key={todo.id} className="flex items-start gap-3 rounded-lg border bg-muted p-3">
                 <input
                   type="checkbox"
                   checked={true}

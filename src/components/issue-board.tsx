@@ -55,7 +55,7 @@ export function IssueBoard({ groupId }: IssueBoardProps) {
     <div className="space-y-3">
       {openIssues.length === 0 && <p className="text-sm text-muted-foreground">No open issues.</p>}
       {openIssues.map((issue: any) => (
-        <div key={issue.id} className="rounded-lg border bg-white p-4 space-y-2">
+        <div key={issue.id} className="rounded-lg border bg-card p-4 space-y-2">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export function IssueBoard({ groupId }: IssueBoardProps) {
           </summary>
           <div className="mt-2 space-y-2">
             {closedIssues.map((issue: any) => (
-              <div key={issue.id} className="rounded-lg border bg-gray-50 p-3">
+              <div key={issue.id} className="rounded-lg border bg-muted p-3">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Closed</Badge>
                   <p className="text-sm">{issue.description}</p>

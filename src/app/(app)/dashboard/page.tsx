@@ -103,7 +103,7 @@ export default function DashboardPage() {
       </div>
 
       {recentMeetings && recentMeetings.length > 0 && (
-        <div className="rounded-lg border bg-white p-4">
+        <div className="rounded-lg border bg-card p-4">
           <h3 className="font-semibold mb-3">Recent Meetings</h3>
           <div className="space-y-2">
             {recentMeetings.map((m: any, i: number) => (
