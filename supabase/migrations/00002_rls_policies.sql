@@ -263,7 +263,7 @@ CREATE POLICY "focus_items_insert" ON focus_items FOR INSERT
       SELECT 1 FROM focus_snapshots fs
       WHERE fs.id = focus_items.snapshot_id
       AND fs.user_id = auth.uid()
-      AND fs.is_current = true
+      AND fs.week_date = date_trunc('week', CURRENT_DATE)::date
     )
   );
 
@@ -273,7 +273,7 @@ CREATE POLICY "focus_items_update" ON focus_items FOR UPDATE
       SELECT 1 FROM focus_snapshots fs
       WHERE fs.id = focus_items.snapshot_id
       AND fs.user_id = auth.uid()
-      AND fs.is_current = true
+      AND fs.week_date = date_trunc('week', CURRENT_DATE)::date
     )
   );
 
@@ -283,7 +283,7 @@ CREATE POLICY "focus_items_delete" ON focus_items FOR DELETE
       SELECT 1 FROM focus_snapshots fs
       WHERE fs.id = focus_items.snapshot_id
       AND fs.user_id = auth.uid()
-      AND fs.is_current = true
+      AND fs.week_date = date_trunc('week', CURRENT_DATE)::date
     )
   );
 

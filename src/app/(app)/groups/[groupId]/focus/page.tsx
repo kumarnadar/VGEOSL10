@@ -20,7 +20,16 @@ export default function FocusPage() {
 
   const { data: weekDates } = useWeekDates(user?.id || null, groupId)
   const currentWeekDate = weekDates?.[weekIndex]?.week_date || null
-  const isCurrentWeek = weekDates?.[weekIndex]?.is_current ?? false
+
+  // Compute isCurrentWeek from date instead of DB flag
+  const isCurrentWeek = (() => {
+    if (!currentWeekDate) return false
+    const today = new Date()
+    const monday = new Date(today)
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+    const thisMonday = monday.toISOString().split('T')[0]
+    return currentWeekDate === thisMonday
+  })()
 
   const { data: mySnapshot } = useFocusSnapshot(user?.id || null, groupId, currentWeekDate)
   const { data: groupSnapshots } = useGroupFocusSnapshots(groupId, currentWeekDate)
@@ -32,7 +41,7 @@ export default function FocusPage() {
 
     const today = new Date()
     const monday = new Date(today)
-    monday.setDate(today.getDate() - today.getDay() + 1)
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
     const weekDate = monday.toISOString().split('T')[0]
 
     await supabase.rpc('start_new_week', {
@@ -52,7 +61,7 @@ export default function FocusPage() {
 
     const today = new Date()
     const monday = new Date(today)
-    monday.setDate(today.getDate() - today.getDay() + 1)
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
     const weekDate = monday.toISOString().split('T')[0]
 
     await supabase.from('focus_snapshots').insert({
