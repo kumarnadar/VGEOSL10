@@ -39,7 +39,7 @@ export function DashboardCard({ title, value, subtitle, icon, accent, progress, 
   const isClickable = !!(href || onClick)
 
   const cardContent = (
-    <Card className={`card-hover animate-fade-in ${borderClass} ${isClickable ? 'cursor-pointer group' : ''}`}>
+    <Card className={`card-hover animate-fade-in h-full ${borderClass} ${isClickable ? 'cursor-pointer group' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>

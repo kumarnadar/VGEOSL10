@@ -218,6 +218,7 @@ export default function DashboardPage() {
         <DashboardCard
           title="Top 10 Items"
           value={top10ItemCount}
+          subtitle="This week"
           icon={<ListChecks className="h-5 w-5" />}
           accent="purple"
           onClick={() => setTop10DialogOpen(true)}
