@@ -14,7 +14,10 @@ import { IssueDetailDialog } from '@/components/issue-detail-dialog'
 import { TodoList } from '@/components/todo-list'
 import { CreateTodoDialog } from '@/components/create-todo-dialog'
 import { EmptyState } from '@/components/empty-state'
-import { TableSkeleton } from '@/components/page-skeleton'
+import { TableSkeleton, CardSkeleton } from '@/components/page-skeleton'
+import { ViewToggle } from '@/components/view-toggle'
+import { useViewPreference } from '@/hooks/use-view-preference'
+import { Card, CardContent } from '@/components/ui/card'
 
 export default function IssuesPage() {
   const params = useParams()
@@ -27,6 +30,7 @@ export default function IssuesPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<any>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [viewMode, setViewMode] = useViewPreference('eos-issues-view', 'table')
 
   const { data: issues, isLoading } = useSWR(`issues-${groupId}`, async () => {
     const { data } = await supabase
@@ -118,21 +122,30 @@ export default function IssuesPage() {
               </SelectContent>
             </Select>
 
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              <ViewToggle view={viewMode} onChange={setViewMode} />
               <CreateIssueDialog groupId={groupId} />
             </div>
           </div>
 
-          {/* Issues table */}
+          {/* Issues list */}
           {isLoading ? (
-            <TableSkeleton rows={5} />
+            viewMode === 'table' ? (
+              <TableSkeleton rows={5} />
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+              </div>
+            )
           ) : filteredIssues.length === 0 ? (
             <EmptyState
               icon={<AlertCircle className="h-7 w-7" />}
               title="No issues found"
               description={raisedByFilter || priorityFilter || statusFilter ? "No issues match the current filters." : "No issues have been raised for this group yet."}
             />
-          ) : (
+          ) : viewMode === 'table' ? (
             <div className="rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -174,6 +187,40 @@ export default function IssuesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {filteredIssues.map((issue: any) => (
+                <Card
+                  key={issue.id}
+                  className={`card-hover cursor-pointer ${issue.status === 'closed' ? 'opacity-60' : ''}`}
+                  onClick={() => handleRowClick(issue)}
+                >
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className={`font-medium text-sm ${issue.status === 'closed' ? 'line-through' : ''}`}>
+                        {issue.description}
+                      </span>
+                      {issue.priority && (
+                        <span className="text-xs font-mono text-muted-foreground shrink-0">
+                          #{issue.priority}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{issue.raised_by_user?.full_name || '-'}</span>
+                      <span>
+                        {issue.created_at
+                          ? new Date(issue.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                          : '-'}
+                      </span>
+                    </div>
+                    <Badge variant={statusColors[issue.status] as any} className="text-xs">
+                      {issue.status.replace('_', ' ')}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>

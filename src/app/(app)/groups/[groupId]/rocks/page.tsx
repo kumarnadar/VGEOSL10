@@ -14,6 +14,11 @@ import { CardSkeleton } from '@/components/page-skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { FilterChip } from '@/components/filter-chip'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ViewToggle } from '@/components/view-toggle'
+import { useViewPreference } from '@/hooks/use-view-preference'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TableSkeleton } from '@/components/page-skeleton'
 
 export default function RocksPage() {
   const params = useParams()
@@ -57,6 +62,7 @@ export default function RocksPage() {
   }, [quarters, selectedQuarter])
 
   const { data: rocks, isLoading } = useRocks(groupId, selectedQuarter)
+  const [viewMode, setViewMode] = useViewPreference('eos-rocks-view', 'card')
 
   const filteredRocks = rocks?.filter((rock: any) => {
     if (statusFilter && rock.status !== statusFilter) return false
@@ -75,6 +81,7 @@ export default function RocksPage() {
           <h1 className="text-2xl font-semibold">Rocks</h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <ViewToggle view={viewMode} onChange={setViewMode} />
           <Select
             value={ownerFilter || 'all'}
             onValueChange={(v) => setOwnerFilter(v === 'all' ? null : v)}
@@ -116,11 +123,15 @@ export default function RocksPage() {
       )}
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-stagger">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-        </div>
+        viewMode === 'card' ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-stagger">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+        ) : (
+          <TableSkeleton rows={5} />
+        )
       ) : filteredRocks?.length === 0 ? (
         (statusFilter || ownerFilter) ? (
           <EmptyState
@@ -136,7 +147,7 @@ export default function RocksPage() {
             description="Create your first rock to start tracking quarterly priorities for this group."
           />
         )
-      ) : (
+      ) : viewMode === 'card' ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-stagger">
           {filteredRocks?.map((rock: any) => (
             <RockCard
@@ -146,6 +157,58 @@ export default function RocksPage() {
               readOnly={!isCurrentQuarter}
             />
           ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Milestones</TableHead>
+                <TableHead>Completion</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRocks?.map((rock: any) => {
+                const total = rock.milestones?.length || 0
+                const done = rock.milestones?.filter((m: any) => m.status === 'done').length || 0
+                return (
+                  <TableRow
+                    key={rock.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => router.push(`/groups/${groupId}/rocks/${rock.id}`)}
+                  >
+                    <TableCell className="font-medium">
+                      {rock.title}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {rock.owner?.full_name || 'Unassigned'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={rock.status === 'on_track'
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-red-50 text-red-700 border-red-200'}
+                      >
+                        {rock.status === 'on_track' ? 'On Track' : 'Off Track'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {total > 0 ? `${done}/${total}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {rock.completion === 'in_progress' ? '-' :
+                       rock.completion === 'done' ? 'Done' :
+                       rock.completion === 'not_done' ? 'Not Done' : 'Rolled Forward'}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
