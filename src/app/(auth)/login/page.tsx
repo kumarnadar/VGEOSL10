@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -42,9 +43,19 @@ function LoginForm({ idPrefix, email, setEmail, loading, message, handleLogin }:
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageContent />
+    </Suspense>
+  )
+}
+
+function LoginPageContent() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const searchParams = useSearchParams()
+  const isDeactivated = searchParams.get('deactivated') === 'true'
   const supabase = createClient()
 
   async function handleLogin(e: React.FormEvent) {
@@ -115,6 +126,11 @@ export default function LoginPage() {
               <CardDescription>Enter your email to receive a login link.</CardDescription>
             </CardHeader>
             <CardContent>
+              {isDeactivated && (
+                <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  Your account has been deactivated. Contact your administrator.
+                </div>
+              )}
               <LoginForm
                 idPrefix="mobile"
                 email={email}
@@ -138,6 +154,11 @@ export default function LoginPage() {
               <CardDescription>Enter your email to receive a login link.</CardDescription>
             </CardHeader>
             <CardContent>
+              {isDeactivated && (
+                <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  Your account has been deactivated. Contact your administrator.
+                </div>
+              )}
               <LoginForm
                 idPrefix="desktop"
                 email={email}

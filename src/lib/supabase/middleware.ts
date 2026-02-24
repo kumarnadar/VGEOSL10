@@ -37,5 +37,32 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Block deactivated users
+  if (
+    user &&
+    !request.nextUrl.pathname.startsWith('/login') &&
+    !request.nextUrl.pathname.startsWith('/auth')
+  ) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_active')
+      .eq('id', user.id)
+      .single()
+
+    if (profile && !profile.is_active) {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('deactivated', 'true')
+      const redirectResponse = NextResponse.redirect(url)
+      request.cookies.getAll().forEach((cookie) => {
+        if (cookie.name.startsWith('sb-')) {
+          redirectResponse.cookies.delete(cookie.name)
+        }
+      })
+      return redirectResponse
+    }
+  }
+
   return supabaseResponse
 }
