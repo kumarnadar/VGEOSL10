@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import useSWR from 'swr'
@@ -22,6 +24,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  Menu,
 } from 'lucide-react'
 
 function getInitials(name: string): string {
@@ -34,7 +37,7 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-export function Sidebar() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, signOut, isLoading } = useUser()
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
@@ -78,7 +81,7 @@ export function Sidebar() {
   const userInitials = user.full_name ? getInitials(user.full_name) : (user.email?.[0] || '?').toUpperCase()
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r bg-sidebar">
+    <div className="flex h-full flex-col">
       {/* Header with user info */}
       <div className="p-4 border-b">
         <h1 className="text-xl font-bold text-primary font-[family-name:var(--font-montserrat)]">
@@ -99,6 +102,7 @@ export function Sidebar() {
         <div className="animate-slide-in-left">
           <Link
             href="/dashboard"
+            onClick={onNavigate}
             className={cn(
               'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
               pathname === '/dashboard' ? activeClass : inactiveClass
@@ -143,6 +147,7 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
                     pathname.startsWith(item.href) ? activeClass : inactiveClass
@@ -160,6 +165,7 @@ export function Sidebar() {
         <div className="animate-slide-in-left">
           <Link
             href="/rock-ideas"
+            onClick={onNavigate}
             className={cn(
               'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
               pathname === '/rock-ideas' ? activeClass : inactiveClass
@@ -181,6 +187,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onNavigate}
                 className={cn(
                   'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
                   pathname === item.href ? activeClass : inactiveClass
@@ -212,6 +219,34 @@ export function Sidebar() {
           Sign Out
         </Button>
       </div>
+    </div>
+  )
+}
+
+/** Desktop sidebar -- always visible at lg+ breakpoint */
+export function Sidebar() {
+  return (
+    <aside className="hidden lg:flex h-screen w-64 flex-col border-r bg-sidebar">
+      <SidebarContent />
     </aside>
+  )
+}
+
+/** Mobile sidebar -- Sheet overlay, visible below lg breakpoint */
+export function MobileSidebar() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="lg:hidden">
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Open menu</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-64 p-0" showCloseButton={false}>
+        <SidebarContent onNavigate={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
   )
 }

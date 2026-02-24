@@ -91,7 +91,7 @@ export function RocksByGroupTable({ data }: { data: RocksByGroupRow[] }) {
         <CardTitle className="text-base">Rocks by Group</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="table-striped">
+        <div className="table-striped overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
@@ -157,7 +157,7 @@ export function RocksByPersonTable({ data }: { data: RocksByPersonRow[] }) {
         <CardTitle className="text-base">Rocks by Person</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="table-striped">
+        <div className="table-striped overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
