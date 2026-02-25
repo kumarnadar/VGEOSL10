@@ -45,14 +45,42 @@ export function ScorecardGrid({
   }, [entries])
 
   // Build aggregate map (for grid cell display - sum per measure+week)
+  // Also compute calculated measure values from their formulas
   const aggregateMap = useMemo(() => {
     const map = new Map<string, number>()
     entries?.forEach((e: any) => {
       const key = `${e.measure_id}-${e.week_ending}`
       map.set(key, (map.get(key) || 0) + Number(e.value || 0))
     })
+
+    // Compute calculated measures (e.g., sum of source measures)
+    template?.scorecard_sections?.forEach((section: any) => {
+      // Build name->id lookup within this section
+      const nameToId = new Map<string, string>()
+      section.scorecard_measures?.forEach((m: any) => {
+        nameToId.set(m.name, m.id)
+      })
+
+      section.scorecard_measures?.forEach((m: any) => {
+        if (!m.is_calculated || !m.calculation_formula) return
+        const formula = m.calculation_formula
+        if (formula.type === 'sum' && Array.isArray(formula.source_measures)) {
+          weekEndings.forEach((week) => {
+            let sum = 0
+            formula.source_measures.forEach((sourceName: string) => {
+              const sourceId = nameToId.get(sourceName)
+              if (sourceId) {
+                sum += map.get(`${sourceId}-${week}`) || 0
+              }
+            })
+            map.set(`${m.id}-${week}`, sum)
+          })
+        }
+      })
+    })
+
     return map
-  }, [entries])
+  }, [entries, template, weekEndings])
 
   // Build compatibility map for rollup calculations (key -> {value: number})
   const rollupEntryMap = useMemo(() => {

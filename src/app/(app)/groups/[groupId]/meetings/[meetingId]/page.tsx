@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useRocks, useQuarters } from '@/hooks/use-rocks'
+import { useGroupFocusSnapshots } from '@/hooks/use-focus'
+import { FocusTable } from '@/components/focus-table'
 
 export default function MeetingViewPage() {
   const params = useParams()
@@ -38,6 +40,7 @@ export default function MeetingViewPage() {
   const { data: quarters } = useQuarters()
   const currentQuarter = quarters?.find((q: any) => q.is_current)
   const { data: rocks } = useRocks(groupId, currentQuarter?.id || null)
+  const { data: focusSnapshots } = useGroupFocusSnapshots(groupId, meeting?.meeting_date || null)
 
   async function updateCheckin(attendeeId: string, note: string) {
     await supabase.from('meeting_attendees').update({ checkin_note: note }).eq('id', attendeeId)
@@ -121,7 +124,19 @@ export default function MeetingViewPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Top 10 Review</h2>
             <p className="text-sm text-muted-foreground">Review group focus items for this week.</p>
-            <p className="text-sm text-muted-foreground">Navigate to Top 10 for detailed view.</p>
+            {focusSnapshots && focusSnapshots.length > 0 ? (
+              focusSnapshots.map((snapshot: any) => (
+                <FocusTable
+                  key={snapshot.id}
+                  snapshot={snapshot}
+                  readOnly={true}
+                  showOwner={true}
+                  ownerName={snapshot.user?.full_name}
+                />
+              ))
+            ) : (
+              <p className="text-muted-foreground">No focus items for this week.</p>
+            )}
           </div>
         )}
 
