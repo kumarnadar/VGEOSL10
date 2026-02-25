@@ -9,6 +9,7 @@ import { ScoreInput } from '@/components/score-input'
 import { RockCard } from '@/components/rock-card'
 import { IssueBoard } from '@/components/issue-board'
 import { TodoList } from '@/components/todo-list'
+import { MeetingScorecardReview } from '@/components/scorecard/meeting-scorecard-review'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -93,7 +94,11 @@ export default function MeetingViewPage() {
         {activeStep === 'scorecard' && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Scorecard</h2>
-            <p className="text-sm text-muted-foreground">Review key metrics. (Scorecard integration coming in a future release.)</p>
+            <MeetingScorecardReview
+              groupId={groupId}
+              meetingDate={meeting.meeting_date}
+              attendees={attendees}
+            />
           </div>
         )}
 

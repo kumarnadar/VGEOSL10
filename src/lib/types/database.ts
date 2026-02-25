@@ -612,6 +612,480 @@ export type Database = {
           },
         ]
       }
+      scorecard_templates: {
+        Row: {
+          id: string
+          group_id: string
+          name: string
+          description: string | null
+          is_active: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          name: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          name?: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_templates_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_sections: {
+        Row: {
+          id: string
+          template_id: string
+          name: string
+          display_order: number
+          section_type: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          name: string
+          display_order?: number
+          section_type: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          name?: string
+          display_order?: number
+          section_type?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_sections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_measures: {
+        Row: {
+          id: string
+          section_id: string
+          name: string
+          display_order: number
+          data_type: string
+          is_calculated: boolean
+          calculation_formula: Json | null
+          owner_user_id: string | null
+          zoho_field_mapping: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          section_id: string
+          name: string
+          display_order?: number
+          data_type?: string
+          is_calculated?: boolean
+          calculation_formula?: Json | null
+          owner_user_id?: string | null
+          zoho_field_mapping?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          section_id?: string
+          name?: string
+          display_order?: number
+          data_type?: string
+          is_calculated?: boolean
+          calculation_formula?: Json | null
+          owner_user_id?: string | null
+          zoho_field_mapping?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_measures_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scorecard_measures_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_goals: {
+        Row: {
+          id: string
+          measure_id: string
+          quarter: string
+          goal_value: number
+          set_by: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          measure_id: string
+          quarter: string
+          goal_value: number
+          set_by: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          measure_id?: string
+          quarter?: string
+          goal_value?: number
+          set_by?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_goals_measure_id_fkey"
+            columns: ["measure_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_measures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scorecard_goals_set_by_fkey"
+            columns: ["set_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goal_change_log: {
+        Row: {
+          id: string
+          goal_id: string
+          previous_value: number
+          new_value: number
+          changed_by: string
+          changed_at: string
+          reason: string | null
+        }
+        Insert: {
+          id?: string
+          goal_id: string
+          previous_value: number
+          new_value: number
+          changed_by: string
+          changed_at?: string
+          reason?: string | null
+        }
+        Update: {
+          id?: string
+          goal_id?: string
+          previous_value?: number
+          new_value?: number
+          changed_by?: string
+          changed_at?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_change_log_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_change_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_entries: {
+        Row: {
+          id: string
+          measure_id: string
+          user_id: string
+          week_ending: string
+          value: number | null
+          zoho_record_id: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          measure_id: string
+          user_id: string
+          week_ending: string
+          value?: number | null
+          zoho_record_id?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          measure_id?: string
+          user_id?: string
+          week_ending?: string
+          value?: number | null
+          zoho_record_id?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_entries_measure_id_fkey"
+            columns: ["measure_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_measures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scorecard_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_entry_details: {
+        Row: {
+          id: string
+          entry_id: string
+          line_name: string
+          line_value: number | null
+          notes: string | null
+          zoho_potential_id: string | null
+          display_order: number
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          entry_id: string
+          line_name: string
+          line_value?: number | null
+          notes?: string | null
+          zoho_potential_id?: string | null
+          display_order?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          entry_id?: string
+          line_name?: string
+          line_value?: number | null
+          notes?: string | null
+          zoho_potential_id?: string | null
+          display_order?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_entry_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          id: string
+          group_id: string
+          name: string
+          leads_count_total: number | null
+          status: string
+          created_at: string | null
+          archived_at: string | null
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          name: string
+          leads_count_total?: number | null
+          status?: string
+          created_at?: string | null
+          archived_at?: string | null
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          name?: string
+          leads_count_total?: number | null
+          status?: string
+          created_at?: string | null
+          archived_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_weekly_data: {
+        Row: {
+          id: string
+          campaign_id: string
+          week_ending: string
+          data: Json
+          entered_by: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          campaign_id: string
+          week_ending: string
+          data?: Json
+          entered_by: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          campaign_id?: string
+          week_ending?: string
+          data?: Json
+          entered_by?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_weekly_data_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_weekly_data_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_metric_definitions: {
+        Row: {
+          id: string
+          group_id: string
+          metric_key: string
+          label: string
+          data_type: string
+          is_required: boolean
+          display_order: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          metric_key: string
+          label: string
+          data_type?: string
+          is_required?: boolean
+          display_order?: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          metric_key?: string
+          label?: string
+          data_type?: string
+          is_required?: boolean
+          display_order?: number
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_metric_definitions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_settings: {
+        Row: {
+          id: string
+          group_id: string
+          setting_key: string
+          setting_value: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          setting_key: string
+          setting_value: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          setting_key?: string
+          setting_value?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_settings_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       todos: {
         Row: {
           id: string

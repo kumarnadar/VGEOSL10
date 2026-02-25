@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils'
 
 const AGENDA_STEPS = [
   { id: 'checkins', label: 'Check-ins', description: 'Personal & professional highlights' },
-  { id: 'scorecard', label: 'Scorecard', description: 'Review key metrics' },
   { id: 'rocks', label: 'Rock Review', description: 'On track / off track status' },
+  { id: 'scorecard', label: 'Scorecard', description: 'Review key metrics' },
   { id: 'focus', label: 'Top 10 Review', description: 'Focus tracker review' },
   { id: 'issues', label: 'Issues (IDS)', description: 'Identify, Discuss, Solve' },
   { id: 'conclude', label: 'Conclude & Score', description: 'Recap to-dos and rate meeting' },

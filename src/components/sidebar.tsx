@@ -25,6 +25,7 @@ import {
   Moon,
   LogOut,
   Menu,
+  BarChart3,
 } from 'lucide-react'
 
 function getInitials(name: string): string {
@@ -72,8 +73,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const groupNavItems = (groupId: string) => [
     { href: `/groups/${groupId}/meetings`, label: 'Meetings', icon: Calendar },
-    { href: `/groups/${groupId}/focus`, label: 'Top 10', icon: ListChecks },
     { href: `/groups/${groupId}/rocks`, label: 'Rocks', icon: Target },
+    { href: `/groups/${groupId}/scorecard`, label: 'Scorecard', icon: BarChart3 },
+    { href: `/groups/${groupId}/focus`, label: 'Top 10', icon: ListChecks },
     { href: `/groups/${groupId}/issues`, label: 'Issues & To-Dos', icon: AlertCircle },
   ]
 
