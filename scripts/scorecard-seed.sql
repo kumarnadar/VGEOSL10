@@ -110,7 +110,7 @@ BEGIN
 
   -- US Team goals
   INSERT INTO scorecard_goals (measure_id, quarter, goal_value, set_by)
-  SELECT m.id, '2026-Q1', goal.val, auth.uid()
+  SELECT m.id, '2026-Q1', goal.val, (SELECT id FROM profiles WHERE role = 'system_admin' LIMIT 1)
   FROM (VALUES
     ('Contacts Created', 15.08),
     ('First Time Meetings', 12.06),
@@ -127,7 +127,7 @@ BEGIN
 
   -- India Team goals
   INSERT INTO scorecard_goals (measure_id, quarter, goal_value, set_by)
-  SELECT m.id, '2026-Q1', goal.val, auth.uid()
+  SELECT m.id, '2026-Q1', goal.val, (SELECT id FROM profiles WHERE role = 'system_admin' LIMIT 1)
   FROM (VALUES
     ('Contacts Created', 75),
     ('First Time Meetings', 75),
@@ -142,7 +142,7 @@ BEGIN
 
   -- Lead Generation goals
   INSERT INTO scorecard_goals (measure_id, quarter, goal_value, set_by)
-  SELECT m.id, '2026-Q1', goal.val, auth.uid()
+  SELECT m.id, '2026-Q1', goal.val, (SELECT id FROM profiles WHERE role = 'system_admin' LIMIT 1)
   FROM (VALUES
     ('Emails Sent', 1760),
     ('Emails Replied To', 176),
