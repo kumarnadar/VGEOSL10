@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/hooks/use-user'
+import { useMemo, useCallback } from 'react'
 import { cn } from '@/lib/utils'
-import { formatValue, parseInputValue, formatWeekHeader, percentToGoal } from '@/lib/scorecard-utils'
+import { formatValue, formatWeekHeader, percentToGoal } from '@/lib/scorecard-utils'
 import { Badge } from '@/components/ui/badge'
 import { RollupRow, computeRollupTotals, computeGoalTotal } from './rollup-row'
-import { mutate } from 'swr'
+import { CellEntryPopover } from './cell-entry-popover'
+import { useGroupMembers } from '@/hooks/use-group-members'
 
 interface ScorecardGridProps {
   template: any
@@ -22,11 +21,6 @@ interface ScorecardGridProps {
   onGoalEdit?: (goalId: string | null, measureId: string, measureName: string, dataType: string, currentValue: number | null) => void
 }
 
-interface EditingCell {
-  measureId: string
-  weekEnding: string
-}
-
 export function ScorecardGrid({
   template,
   entries,
@@ -39,134 +33,56 @@ export function ScorecardGrid({
   onCreateIssue,
   onGoalEdit,
 }: ScorecardGridProps) {
-  const { user } = useUser()
-  const supabase = createClient()
-  const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
-  const [editValue, setEditValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const { data: members } = useGroupMembers(groupId)
 
-  // Focus input when editing starts
-  useEffect(() => {
-    if (editingCell && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
-    }
-  }, [editingCell])
+  // Build per-user entry map (for popover individual values)
+  const userEntryMap = useMemo(() => {
+    const map = new Map<string, any>()
+    entries?.forEach((e: any) => {
+      map.set(`${e.measure_id}-${e.week_ending}-${e.user_id}`, e)
+    })
+    return map
+  }, [entries])
 
-  // Build lookup maps for fast access
-  const entryMap = new Map<string, any>()
-  entries?.forEach((e: any) => {
-    entryMap.set(`${e.measure_id}-${e.week_ending}`, e)
-  })
+  // Build aggregate map (for grid cell display - sum per measure+week)
+  const aggregateMap = useMemo(() => {
+    const map = new Map<string, number>()
+    entries?.forEach((e: any) => {
+      const key = `${e.measure_id}-${e.week_ending}`
+      map.set(key, (map.get(key) || 0) + Number(e.value || 0))
+    })
+    return map
+  }, [entries])
 
-  const goalMap = new Map<string, number>()
-  const goalIdMap = new Map<string, string>()
-  goals?.forEach((g: any) => {
-    goalMap.set(g.measure_id, g.goal_value)
-    goalIdMap.set(g.measure_id, g.id)
-  })
+  // Build compatibility map for rollup calculations (key -> {value: number})
+  const rollupEntryMap = useMemo(() => {
+    const map = new Map<string, any>()
+    aggregateMap.forEach((value, key) => {
+      map.set(key, { value })
+    })
+    return map
+  }, [aggregateMap])
 
-  // Check if current user owns a measure (can edit)
-  const canEdit = useCallback((measure: any) => {
-    if (readOnly) return false
-    if (!user) return false
-    // If measure has a specific owner, only that owner can edit
-    if (measure.owner_user_id) return measure.owner_user_id === user.id
-    // Otherwise any group member can edit their own entries
-    return true
-  }, [user, readOnly])
+  const goalMap = useMemo(() => {
+    const map = new Map<string, number>()
+    goals?.forEach((g: any) => map.set(g.measure_id, g.goal_value))
+    return map
+  }, [goals])
 
-  // Check if a cell has detail line items
-  const hasDetails = useCallback((measureId: string, weekEnding: string) => {
-    const entry = entryMap.get(`${measureId}-${weekEnding}`)
-    return entry?.id ? true : false // Will be enhanced when details are loaded
-  }, [entryMap])
+  const goalIdMap = useMemo(() => {
+    const map = new Map<string, string>()
+    goals?.forEach((g: any) => map.set(g.measure_id, g.id))
+    return map
+  }, [goals])
 
-  // Calculate total for a measure across visible weeks
+  // Calculate total for a measure across visible weeks (from aggregateMap)
   const getMeasureTotal = useCallback((measureId: string) => {
     let total = 0
     weekEndings.forEach((week) => {
-      const entry = entryMap.get(`${measureId}-${week}`)
-      if (entry?.value != null) total += Number(entry.value)
+      total += aggregateMap.get(`${measureId}-${week}`) || 0
     })
     return total
-  }, [weekEndings, entryMap])
-
-  // Calculate section total for a week (sum all measures in section)
-  const getSectionWeekTotal = useCallback((section: any, weekEnding: string) => {
-    let total = 0
-    section.scorecard_measures?.forEach((m: any) => {
-      if (m.is_calculated) return
-      const entry = entryMap.get(`${m.id}-${weekEnding}`)
-      if (entry?.value != null) total += Number(entry.value)
-    })
-    return total
-  }, [entryMap])
-
-  // Save entry
-  const saveEntry = useCallback(async (measureId: string, weekEnding: string, rawValue: string, dataType: string) => {
-    if (!user) return
-    const value = parseInputValue(rawValue, dataType)
-    const existing = entryMap.get(`${measureId}-${weekEnding}`)
-
-    if (existing) {
-      if (value === null && existing.value === null) return
-      if (value === existing.value) return
-      await supabase
-        .from('scorecard_entries')
-        .update({ value, updated_at: new Date().toISOString() })
-        .eq('id', existing.id)
-    } else if (value !== null) {
-      await supabase
-        .from('scorecard_entries')
-        .insert({ measure_id: measureId, user_id: user.id, week_ending: weekEnding, value })
-    }
-
-    mutate(`scorecard-entries-${groupId}-${weekEndings.join(',')}`)
-  }, [user, supabase, groupId, weekEndings, entryMap])
-
-  // Handle cell click to start editing
-  const handleCellClick = useCallback((measure: any, weekEnding: string) => {
-    if (!canEdit(measure) || measure.is_calculated) return
-    const entry = entryMap.get(`${measure.id}-${weekEnding}`)
-    setEditingCell({ measureId: measure.id, weekEnding })
-    setEditValue(entry?.value != null ? String(entry.value) : '')
-  }, [canEdit, entryMap])
-
-  // Handle keyboard navigation
-  const handleKeyDown = useCallback((e: React.KeyboardEvent, measure: any, weekIdx: number, section: any) => {
-    if (e.key === 'Enter' || e.key === 'Tab') {
-      e.preventDefault()
-      saveEntry(measure.id, weekEndings[weekIdx], editValue, measure.data_type)
-      setEditingCell(null)
-
-      // Navigate to next cell
-      const measures = section.scorecard_measures?.filter((m: any) => !m.is_calculated) || []
-      const currentMeasureIdx = measures.findIndex((m: any) => m.id === measure.id)
-
-      if (e.key === 'Tab' && !e.shiftKey) {
-        // Move right (next week) or down to next measure
-        if (weekIdx < weekEndings.length - 1) {
-          handleCellClick(measure, weekEndings[weekIdx + 1])
-        } else if (currentMeasureIdx < measures.length - 1) {
-          handleCellClick(measures[currentMeasureIdx + 1], weekEndings[0])
-        }
-      } else if (e.key === 'Enter') {
-        // Move down to next measure
-        if (currentMeasureIdx < measures.length - 1) {
-          handleCellClick(measures[currentMeasureIdx + 1], weekEndings[weekIdx])
-        }
-      }
-    } else if (e.key === 'Escape') {
-      setEditingCell(null)
-    }
-  }, [editValue, weekEndings, saveEntry, handleCellClick])
-
-  // Handle blur (save and close)
-  const handleBlur = useCallback((measureId: string, weekEnding: string, dataType: string) => {
-    saveEntry(measureId, weekEnding, editValue, dataType)
-    setEditingCell(null)
-  }, [editValue, saveEntry])
+  }, [weekEndings, aggregateMap])
 
   // Compute company-level rollup across all sections
   const companyRollup = useMemo(() => {
@@ -177,10 +93,10 @@ export function ScorecardGrid({
       })
     })
     return {
-      weekTotals: computeRollupTotals(allMeasureIds, weekEndings, entryMap),
+      weekTotals: computeRollupTotals(allMeasureIds, weekEndings, rollupEntryMap),
       goalTotal: computeGoalTotal(allMeasureIds, goalMap),
     }
-  }, [template, weekEndings, entryMap, goalMap])
+  }, [template, weekEndings, rollupEntryMap, goalMap])
 
   if (!template?.scorecard_sections) return null
 
@@ -203,7 +119,6 @@ export function ScorecardGrid({
           </tr>
         </thead>
         <tbody>
-          {/* Company-level rollup (expandable, contains all sections) */}
           <RollupRow
             label="Company Total"
             level="company"
@@ -218,18 +133,15 @@ export function ScorecardGrid({
                 key={section.id}
                 section={section}
                 weekEndings={weekEndings}
-                entryMap={entryMap}
+                rollupEntryMap={rollupEntryMap}
+                aggregateMap={aggregateMap}
+                userEntryMap={userEntryMap}
                 goalMap={goalMap}
                 goalIdMap={goalIdMap}
-                editingCell={editingCell}
-                editValue={editValue}
-                inputRef={inputRef}
-                canEdit={canEdit}
+                members={members || []}
+                groupId={groupId}
+                readOnly={readOnly}
                 getMeasureTotal={getMeasureTotal}
-                onCellClick={handleCellClick}
-                onKeyDown={handleKeyDown}
-                onBlur={handleBlur}
-                onEditValueChange={setEditValue}
                 onDetailClick={onCellClick}
                 onCreateIssue={onCreateIssue}
                 onGoalEdit={onGoalEdit}
@@ -245,18 +157,15 @@ export function ScorecardGrid({
 interface ScorecardSectionProps {
   section: any
   weekEndings: string[]
-  entryMap: Map<string, any>
+  rollupEntryMap: Map<string, any>
+  aggregateMap: Map<string, number>
+  userEntryMap: Map<string, any>
   goalMap: Map<string, number>
   goalIdMap: Map<string, string>
-  editingCell: EditingCell | null
-  editValue: string
-  inputRef: React.RefObject<HTMLInputElement | null>
-  canEdit: (measure: any) => boolean
+  members: any[]
+  groupId: string
+  readOnly: boolean
   getMeasureTotal: (measureId: string) => number
-  onCellClick: (measure: any, weekEnding: string) => void
-  onKeyDown: (e: React.KeyboardEvent, measure: any, weekIdx: number, section: any) => void
-  onBlur: (measureId: string, weekEnding: string, dataType: string) => void
-  onEditValueChange: (value: string) => void
   onDetailClick?: (entryId: string | null, measureId: string, weekEnding: string) => void
   onCreateIssue?: (measureName: string, value: number | null, goal: number | null) => void
   onGoalEdit?: (goalId: string | null, measureId: string, measureName: string, dataType: string, currentValue: number | null) => void
@@ -265,18 +174,15 @@ interface ScorecardSectionProps {
 function ScorecardSection({
   section,
   weekEndings,
-  entryMap,
+  rollupEntryMap,
+  aggregateMap,
+  userEntryMap,
   goalMap,
   goalIdMap,
-  editingCell,
-  editValue,
-  inputRef,
-  canEdit,
+  members,
+  groupId,
+  readOnly,
   getMeasureTotal,
-  onCellClick,
-  onKeyDown,
-  onBlur,
-  onEditValueChange,
   onDetailClick,
   onCreateIssue,
   onGoalEdit,
@@ -285,12 +191,11 @@ function ScorecardSection({
 
   // Compute team-level rollup for this section
   const sectionMeasureIds = measures.filter((m: any) => !m.is_calculated).map((m: any) => m.id)
-  const sectionWeekTotals = computeRollupTotals(sectionMeasureIds, weekEndings, entryMap)
+  const sectionWeekTotals = computeRollupTotals(sectionMeasureIds, weekEndings, rollupEntryMap)
   const sectionGoalTotal = computeGoalTotal(sectionMeasureIds, goalMap)
 
   return (
     <>
-      {/* Team-level rollup row (expandable, defaults expanded) */}
       <RollupRow
         label={section.name}
         level="team"
@@ -300,122 +205,105 @@ function ScorecardSection({
         dataType="currency"
         defaultExpanded={true}
       >
+        {measures.map((measure: any) => {
+          const goal = goalMap.get(measure.id)
+          const total = getMeasureTotal(measure.id)
+          const pctToGoal = goal ? percentToGoal(total, goal) : null
 
-      {/* Measure rows */}
-      {measures.map((measure: any) => {
-        const goal = goalMap.get(measure.id)
-        const total = getMeasureTotal(measure.id)
-        const pctToGoal = goal ? percentToGoal(total, goal) : null
-        const editable = canEdit(measure) && !measure.is_calculated
+          return (
+            <tr key={measure.id} className="border-t hover:bg-muted/30 transition-colors">
+              {/* Measure name */}
+              <td className="sticky left-0 z-10 bg-background px-3 py-1.5 text-left whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  <span className={cn(measure.is_calculated && 'font-medium italic')}>
+                    {measure.name}
+                  </span>
+                  {measure.owner?.full_name && (
+                    <span className="text-xs text-muted-foreground">({measure.owner.full_name})</span>
+                  )}
+                </div>
+              </td>
 
-        return (
-          <tr key={measure.id} className="border-t hover:bg-muted/30 transition-colors">
-            {/* Measure name */}
-            <td className="sticky left-0 z-10 bg-background px-3 py-1.5 text-left whitespace-nowrap">
-              <div className="flex items-center gap-2">
-                <span className={cn(measure.is_calculated && 'font-medium italic')}>
-                  {measure.name}
-                </span>
-                {measure.owner?.full_name && (
-                  <span className="text-xs text-muted-foreground">({measure.owner.full_name})</span>
+              {/* Goal (clickable for editing) */}
+              <td
+                className={cn(
+                  'text-right px-3 py-1.5 text-muted-foreground',
+                  onGoalEdit && 'cursor-pointer hover:text-primary hover:underline'
                 )}
-              </div>
-            </td>
+                onClick={() => onGoalEdit && onGoalEdit(
+                  goalIdMap.get(measure.id) || null,
+                  measure.id,
+                  measure.name,
+                  measure.data_type,
+                  goal ?? null,
+                )}
+              >
+                {goal != null ? formatValue(goal, measure.data_type) : '-'}
+              </td>
 
-            {/* Goal (clickable for editing) */}
-            <td
-              className={cn(
-                'text-right px-3 py-1.5 text-muted-foreground',
-                onGoalEdit && 'cursor-pointer hover:text-primary hover:underline'
-              )}
-              onClick={() => onGoalEdit && onGoalEdit(
-                goalIdMap.get(measure.id) || null,
-                measure.id,
-                measure.name,
-                measure.data_type,
-                goal ?? null,
-              )}
-            >
-              {goal != null ? formatValue(goal, measure.data_type) : '-'}
-            </td>
+              {/* Weekly cells with popover entry */}
+              {weekEndings.map((week) => {
+                const aggValue = aggregateMap.get(`${measure.id}-${week}`) || 0
 
-            {/* Weekly cells */}
-            {weekEndings.map((week, weekIdx) => {
-              const entry = entryMap.get(`${measure.id}-${week}`)
-              const isEditing = editingCell?.measureId === measure.id && editingCell?.weekEnding === week
-              const value = entry?.value
+                if (measure.is_calculated) {
+                  return (
+                    <td key={week} className="text-right px-3 py-1.5 font-medium bg-muted/20">
+                      {aggValue > 0 ? formatValue(aggValue, measure.data_type) : '-'}
+                    </td>
+                  )
+                }
 
-              if (measure.is_calculated) {
                 return (
-                  <td key={week} className="text-right px-3 py-1.5 font-medium bg-muted/20">
-                    {value != null ? formatValue(value, measure.data_type) : '-'}
+                  <td key={week} className="text-right px-3 py-1.5 relative">
+                    <CellEntryPopover
+                      measureId={measure.id}
+                      measureName={measure.name}
+                      dataType={measure.data_type}
+                      weekEnding={week}
+                      groupId={groupId}
+                      weekEndings={weekEndings}
+                      members={members}
+                      userEntryMap={userEntryMap}
+                      aggregateValue={aggValue}
+                      readOnly={readOnly}
+                    >
+                      <button
+                        className={cn(
+                          'w-full text-right cursor-pointer hover:bg-primary/5 rounded px-1 py-0.5',
+                          aggValue === 0 && 'text-muted-foreground'
+                        )}
+                      >
+                        {formatValue(aggValue, measure.data_type)}
+                      </button>
+                    </CellEntryPopover>
                   </td>
                 )
-              }
+              })}
 
-              return (
-                <td
-                  key={week}
-                  className={cn(
-                    'text-right px-3 py-1.5 relative',
-                    editable && 'cursor-pointer hover:bg-primary/5',
-                    !editable && 'text-muted-foreground'
-                  )}
-                  onClick={() => editable && onCellClick(measure, week)}
-                >
-                  {isEditing ? (
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={editValue}
-                      onChange={(e) => onEditValueChange(e.target.value)}
-                      onKeyDown={(e) => onKeyDown(e, measure, weekIdx, section)}
-                      onBlur={() => onBlur(measure.id, week, measure.data_type)}
-                      className="w-full text-right bg-background border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-end gap-1">
-                      {entry?.id && onDetailClick && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onDetailClick(entry.id, measure.id, week)
-                          }}
-                          className="w-0 h-0 border-l-[5px] border-l-transparent border-t-[5px] border-t-blue-500 shrink-0"
-                          title="View details"
-                        />
-                      )}
-                      <span>{value != null ? formatValue(value, measure.data_type) : ''}</span>
-                    </div>
-                  )}
-                </td>
-              )
-            })}
+              {/* Total */}
+              <td className="text-right px-3 py-1.5 font-medium">
+                {total > 0 ? formatValue(total, measure.data_type) : '-'}
+              </td>
 
-            {/* Total */}
-            <td className="text-right px-3 py-1.5 font-medium">
-              {total > 0 ? formatValue(total, measure.data_type) : '-'}
-            </td>
-
-            {/* % to Goal */}
-            <td className="text-right px-3 py-1.5">
-              {pctToGoal != null ? (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'text-xs',
-                    pctToGoal >= 0.9 ? 'bg-green-50 text-green-700 border-green-200' :
-                    pctToGoal >= 0.7 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                    'bg-red-50 text-red-700 border-red-200'
-                  )}
-                >
-                  {(pctToGoal * 100).toFixed(0)}%
-                </Badge>
-              ) : '-'}
-            </td>
-          </tr>
-        )
-      })}
+              {/* % to Goal */}
+              <td className="text-right px-3 py-1.5">
+                {pctToGoal != null ? (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'text-xs',
+                      pctToGoal >= 0.9 ? 'bg-green-50 text-green-700 border-green-200' :
+                      pctToGoal >= 0.7 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                      'bg-red-50 text-red-700 border-red-200'
+                    )}
+                  >
+                    {(pctToGoal * 100).toFixed(0)}%
+                  </Badge>
+                ) : '-'}
+              </td>
+            </tr>
+          )
+        })}
       </RollupRow>
     </>
   )
