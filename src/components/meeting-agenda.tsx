@@ -11,16 +11,25 @@ const AGENDA_STEPS = [
   { id: 'conclude', label: 'Conclude & Score', description: 'Recap to-dos and rate meeting' },
 ]
 
+interface AgendaStepItem {
+  id: string
+  label: string
+  description: string
+}
+
 interface MeetingAgendaProps {
   activeStep: string
   onStepChange: (stepId: string) => void
   completedSteps?: string[]
+  steps?: AgendaStepItem[]
 }
 
-export function MeetingAgenda({ activeStep, onStepChange, completedSteps = [] }: MeetingAgendaProps) {
+export function MeetingAgenda({ activeStep, onStepChange, completedSteps = [], steps }: MeetingAgendaProps) {
+  const displaySteps = steps ?? AGENDA_STEPS
+
   return (
     <nav className="space-y-0">
-      {AGENDA_STEPS.map((step, index) => {
+      {displaySteps.map((step, index) => {
         const isCompleted = completedSteps.includes(step.id)
         const isActive = activeStep === step.id
 
@@ -30,7 +39,7 @@ export function MeetingAgenda({ activeStep, onStepChange, completedSteps = [] }:
               <div className="flex justify-start pl-[15px]">
                 <div className={cn(
                   'w-0.5 h-3',
-                  completedSteps.includes(AGENDA_STEPS[index - 1].id) ? 'bg-green-500' : 'bg-border'
+                  completedSteps.includes(displaySteps[index - 1].id) ? 'bg-green-500' : 'bg-border'
                 )} />
               </div>
             )}

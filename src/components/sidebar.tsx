@@ -1,12 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@/hooks/use-user'
+import { useUserPreferences } from '@/hooks/use-user-preferences'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import useSWR from 'swr'
@@ -18,14 +26,13 @@ import {
   Target,
   AlertCircle,
   Lightbulb,
-  Users,
-  Layers,
-  CalendarDays,
+  Settings,
   Sun,
   Moon,
   LogOut,
   Menu,
   BarChart3,
+  User,
 } from 'lucide-react'
 
 function getInitials(name: string): string {
@@ -46,6 +53,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const groups = user?.group_members?.map((gm: any) => gm.groups) || []
   const isAdmin = user?.role === 'system_admin'
+
+  // Sync theme from DB on mount
+  const { preferences } = useUserPreferences(user?.id || null)
+  useEffect(() => {
+    if (preferences?.theme && preferences.theme !== theme) {
+      setTheme(preferences.theme)
+    }
+  }, [preferences?.theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: groupMembers } = useSWR(
     user ? 'group-members' : null,
@@ -81,6 +96,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const userDisplayName = user.full_name || user.email || ''
   const userInitials = user.full_name ? getInitials(user.full_name) : (user.email?.[0] || '?').toUpperCase()
+  const avatarUrl = user.avatar_url
 
   return (
     <div className="flex h-full flex-col">
@@ -95,11 +111,34 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <p className="text-[10px] text-muted-foreground leading-tight">Platform</p>
           </div>
         </div>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-            {userInitials}
-          </div>
-          <p className="text-sm text-muted-foreground truncate">{userDisplayName}</p>
+        <div className="mt-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex w-full items-center gap-2 rounded-md px-1 py-1 hover:bg-sidebar-accent transition-colors">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                    {userInitials}
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground truncate">{userDisplayName}</p>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link href="/profile" onClick={onNavigate}>
+                  <User className="h-4 w-4 mr-2" />
+                  My Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -183,27 +222,20 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         </div>
 
-        {/* Admin items (promoted to top-level, no section header) */}
+        {/* Settings (admin only) */}
         {isAdmin && (
-          <div className="space-y-0 animate-slide-in-left">
-            {[
-              { href: '/admin/users', label: 'Users', icon: Users },
-              { href: '/admin/groups', label: 'Groups', icon: Layers },
-              { href: '/admin/quarters', label: 'Quarters', icon: CalendarDays },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                className={cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
-                  pathname === item.href ? activeClass : inactiveClass
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            ))}
+          <div className="animate-slide-in-left">
+            <Link
+              href="/settings"
+              onClick={onNavigate}
+              className={cn(
+                'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
+                pathname === '/settings' ? activeClass : inactiveClass
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
           </div>
         )}
       </nav>
@@ -220,10 +252,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
-        <Button variant="ghost" className="flex-1 justify-start text-sm gap-2" onClick={signOut}>
-          <LogOut className="h-4 w-4" />
-          Sign Out
         </Button>
       </div>
     </div>

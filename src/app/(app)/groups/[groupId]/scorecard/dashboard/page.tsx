@@ -128,9 +128,6 @@ export default function ScorecardDashboardPage() {
             <TabsTrigger value="dashboard" asChild>
               <Link href={`/groups/${groupId}/scorecard/dashboard`}>Dashboard</Link>
             </TabsTrigger>
-            <TabsTrigger value="settings" asChild>
-              <Link href={`/groups/${groupId}/scorecard/settings`}>Settings</Link>
-            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
