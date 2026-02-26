@@ -51,6 +51,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { theme, setTheme } = useTheme()
   const supabase = createClient()
 
+  const [avatarError, setAvatarError] = useState(false)
+
   const groups = user?.group_members?.map((gm: any) => gm.groups) || []
   const isAdmin = user?.role === 'system_admin'
 
@@ -97,7 +99,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const userDisplayName = user.full_name || user.email || ''
   const userInitials = user.full_name ? getInitials(user.full_name) : (user.email?.[0] || '?').toUpperCase()
   const avatarUrl = user.avatar_url
-  const [avatarError, setAvatarError] = useState(false)
 
   return (
     <div className="flex h-full flex-col">
