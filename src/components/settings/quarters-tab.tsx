@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 export function QuartersTab() {
   const supabase = createClient()
@@ -22,7 +23,12 @@ export function QuartersTab() {
   })
 
   async function handleCreate() {
-    await supabase.from('quarters').insert({ label, start_date: startDate, end_date: endDate })
+    const { error } = await supabase.from('quarters').insert({ label, start_date: startDate, end_date: endDate })
+    if (error) {
+      toast.error('Failed to create quarter')
+      return
+    }
+    toast.success('Quarter created')
     setLabel('')
     setStartDate('')
     setEndDate('')
@@ -30,7 +36,12 @@ export function QuartersTab() {
   }
 
   async function setCurrentQuarter(id: string) {
-    await supabase.from('quarters').update({ is_current: true }).eq('id', id)
+    const { error } = await supabase.from('quarters').update({ is_current: true }).eq('id', id)
+    if (error) {
+      toast.error('Failed to set current quarter')
+      return
+    }
+    toast.success('Current quarter updated')
     mutate('admin-quarters')
   }
 

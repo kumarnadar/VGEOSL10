@@ -23,8 +23,6 @@ export default function IssuesPage() {
   const params = useParams()
   const groupId = params.groupId as string
   const { user } = useUser()
-  const supabase = createClient()
-
   const [raisedByFilter, setRaisedByFilter] = useState<string | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
@@ -33,6 +31,7 @@ export default function IssuesPage() {
   const [viewMode, setViewMode] = useViewPreference('eos-issues-view', 'table')
 
   const { data: issues, isLoading } = useSWR(`issues-${groupId}`, async () => {
+    const supabase = createClient()
     const { data } = await supabase
       .from('issues')
       .select('*, raised_by_user:profiles!raised_by(id, full_name), assigned_to:profiles!assigned_to_id(full_name)')
@@ -59,7 +58,7 @@ export default function IssuesPage() {
     return true
   })
 
-  const statusColors: Record<string, string> = {
+  const statusColors: Record<string, 'default' | 'secondary' | 'outline'> = {
     open: 'default',
     in_discussion: 'secondary',
     closed: 'outline',
@@ -182,7 +181,7 @@ export default function IssuesPage() {
                         {issue.created_at ? new Date(issue.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                       </td>
                       <td className="py-2.5 px-3">
-                        <Badge variant={statusColors[issue.status] as any}>
+                        <Badge variant={statusColors[issue.status]}>
                           {issue.status.replace('_', ' ')}
                         </Badge>
                       </td>
@@ -218,7 +217,7 @@ export default function IssuesPage() {
                           : '-'}
                       </span>
                     </div>
-                    <Badge variant={statusColors[issue.status] as any} className="text-xs">
+                    <Badge variant={statusColors[issue.status]} className="text-xs">
                       {issue.status.replace('_', ' ')}
                     </Badge>
                   </CardContent>

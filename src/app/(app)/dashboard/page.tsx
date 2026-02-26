@@ -13,6 +13,15 @@ import { Target, TrendingUp, AlertCircle, Star, LayoutDashboard, ListChecks } fr
 import { Card } from '@/components/ui/card'
 import { Top10ReviewDialog } from '@/components/top10-review-dialog'
 
+/** Shape returned by the meetings query (Supabase join types not inferred correctly). */
+interface Meeting {
+  id: string
+  meeting_date: string
+  average_score: number | null
+  group_id: string
+  group: { name: string } | null
+}
+
 export default function DashboardPage() {
   const supabase = createClient()
   const { user } = useUser()
@@ -85,7 +94,7 @@ export default function DashboardPage() {
         query = query.eq('group_id', selectedGroupId)
       }
       const { data } = await query
-      return data || []
+      return (data as Meeting[] | null) || []
     }
   )
 
@@ -122,33 +131,40 @@ export default function DashboardPage() {
   const focusWeekDate = focusData?.weekDate || null
   const isCurrentWeekFocus = focusWeekDate === currentWeekMonday
 
+  // Generic rock aggregation helper: groups rocks by a key and counts on/off track
+  function aggregateRocks<T extends Record<string, unknown>>(
+    keyFn: (rock: any) => string,
+    seedFn: (rock: any) => T,
+  ): (T & { total: number; onTrack: number; offTrack: number })[] {
+    const acc: Record<string, T & { total: number; onTrack: number; offTrack: number }> = {}
+    rocks?.forEach((rock: any) => {
+      const key = keyFn(rock)
+      if (!acc[key]) acc[key] = { ...seedFn(rock), total: 0, onTrack: 0, offTrack: 0 }
+      acc[key].total++
+      if (rock.status === 'on_track') acc[key].onTrack++
+      else acc[key].offTrack++
+    })
+    return Object.values(acc)
+  }
+
   // Aggregate rocks by group
-  const rocksByGroup: Record<string, { groupName: string; groupId: string; total: number; onTrack: number; offTrack: number }> = {}
-  rocks?.forEach((rock: any) => {
-    const name = rock.group?.name || 'Unknown'
-    const gid = rock.group?.id || ''
-    if (!rocksByGroup[name]) rocksByGroup[name] = { groupName: name, groupId: gid, total: 0, onTrack: 0, offTrack: 0 }
-    rocksByGroup[name].total++
-    if (rock.status === 'on_track') rocksByGroup[name].onTrack++
-    else rocksByGroup[name].offTrack++
-  })
-  const rocksByGroupData = Object.values(rocksByGroup).map((r) => ({
+  const rocksByGroupData = aggregateRocks(
+    (rock) => rock.group?.name || 'Unknown',
+    (rock) => ({ groupName: rock.group?.name || 'Unknown', groupId: rock.group?.id || '' }),
+  ).map((r) => ({
     ...r,
     pctOnTrack: r.total > 0 ? `${Math.round((r.onTrack / r.total) * 100)}%` : '-',
   }))
 
   // Aggregate rocks by person
-  const rocksByPerson: Record<string, { personName: string; ownerId: string; groupId: string; total: number; onTrack: number; offTrack: number }> = {}
-  rocks?.forEach((rock: any) => {
-    const name = rock.owner?.full_name || 'Unknown'
-    const oid = rock.owner?.id || ''
-    const gid = selectedGroupId || rock.group?.id || ''
-    if (!rocksByPerson[name]) rocksByPerson[name] = { personName: name, ownerId: oid, groupId: gid, total: 0, onTrack: 0, offTrack: 0 }
-    rocksByPerson[name].total++
-    if (rock.status === 'on_track') rocksByPerson[name].onTrack++
-    else rocksByPerson[name].offTrack++
-  })
-  const rocksByPersonData = Object.values(rocksByPerson)
+  const rocksByPersonData = aggregateRocks(
+    (rock) => rock.owner?.full_name || 'Unknown',
+    (rock) => ({
+      personName: rock.owner?.full_name || 'Unknown',
+      ownerId: rock.owner?.id || '',
+      groupId: selectedGroupId || rock.group?.id || '',
+    }),
+  )
 
   const totalRocks = rocks?.length || 0
   const onTrackRocks = rocks?.filter((r: any) => r.status === 'on_track').length || 0
@@ -161,11 +177,14 @@ export default function DashboardPage() {
   ) || 0
 
   // Top 10 subtitle: show week date for context
-  const top10Subtitle = focusWeekDate
-    ? isCurrentWeekFocus
-      ? 'This week'
-      : `Week of ${new Date(focusWeekDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-    : 'No data'
+  let top10Subtitle: string
+  if (!focusWeekDate) {
+    top10Subtitle = 'No data'
+  } else if (isCurrentWeekFocus) {
+    top10Subtitle = 'This week'
+  } else {
+    top10Subtitle = `Week of ${new Date(focusWeekDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+  }
 
   // Prepare dialog snapshots
   const top10DialogSnapshots = focusSnapshots.map((snap: any) => ({
@@ -238,10 +257,10 @@ export default function DashboardPage() {
         <DashboardCard
           title="Last Meeting Score"
           value={recentMeetings?.[0]?.average_score ? Number(recentMeetings[0].average_score).toFixed(1) : '-'}
-          subtitle={(recentMeetings?.[0]?.group as any)?.name}
+          subtitle={recentMeetings?.[0]?.group?.name}
           icon={<Star className="h-5 w-5" />}
           accent="amber"
-          href={selectedGroupId && recentMeetings?.[0] ? `/groups/${selectedGroupId}/meetings/${(recentMeetings[0] as any).id}` : undefined}
+          href={selectedGroupId && recentMeetings?.[0] ? `/groups/${selectedGroupId}/meetings/${recentMeetings[0].id}` : undefined}
         />
         <DashboardCard
           title="Top 10 Items"
@@ -262,14 +281,14 @@ export default function DashboardPage() {
         <Card className="card-hover animate-fade-in p-4">
           <h3 className="font-semibold mb-3">Recent Meetings</h3>
           <div className="space-y-2 table-striped">
-            {recentMeetings.map((m: any, i: number) => (
+            {recentMeetings.map((m, i) => (
               <Link
                 key={i}
-                href={`/groups/${(m as any).group_id}/meetings/${(m as any).id}`}
+                href={`/groups/${m.group_id}/meetings/${m.id}`}
                 className="flex items-center justify-between text-sm border-b pb-2 hover:bg-muted/50 rounded-md px-2 -mx-2"
               >
-                <span>{m.meeting_date} - {(m as any).group?.name}</span>
-                <span className="font-medium">{(m as any).average_score ? `${Number((m as any).average_score).toFixed(1)}/10` : 'No scores'}</span>
+                <span>{m.meeting_date} - {m.group?.name}</span>
+                <span className="font-medium">{m.average_score ? `${Number(m.average_score).toFixed(1)}/10` : 'No scores'}</span>
               </Link>
             ))}
           </div>

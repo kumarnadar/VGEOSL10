@@ -15,7 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
+import { UserAvatar } from '@/components/user-avatar'
 import { createClient } from '@/lib/supabase/client'
 import useSWR from 'swr'
 import { useTheme } from 'next-themes'
@@ -35,23 +36,11 @@ import {
   User,
 } from 'lucide-react'
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, signOut, isLoading } = useUser()
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const supabase = createClient()
-
-  const [avatarError, setAvatarError] = useState(false)
 
   const groups = user?.group_members?.map((gm: any) => gm.groups) || []
   const isAdmin = user?.role === 'system_admin'
@@ -97,7 +86,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   ]
 
   const userDisplayName = user.full_name || user.email || ''
-  const userInitials = user.full_name ? getInitials(user.full_name) : (user.email?.[0] || '?').toUpperCase()
   const avatarUrl = user.avatar_url
 
   return (
@@ -117,13 +105,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-2 rounded-md px-1 py-1 hover:bg-sidebar-accent transition-colors">
-                {avatarUrl && !avatarError ? (
-                  <img src={avatarUrl} alt="Avatar" className="h-8 w-8 shrink-0 rounded-full object-cover" onError={() => setAvatarError(true)} />
-                ) : (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                    {userInitials}
-                  </div>
-                )}
+                <UserAvatar avatarUrl={avatarUrl} name={user.full_name} email={user.email} size="sm" />
                 <p className="text-sm text-muted-foreground truncate">{userDisplayName}</p>
               </button>
             </DropdownMenuTrigger>

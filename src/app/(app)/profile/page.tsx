@@ -13,16 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { User, Palette, Bell, Upload } from 'lucide-react'
 import { toast } from 'sonner'
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
+import { UserAvatar } from '@/components/user-avatar'
 
 export default function ProfilePage() {
   const { user } = useUser()
@@ -56,8 +47,6 @@ function ProfileSection({ user }: { user: any }) {
   })
 
   const avatarUrl = user.avatar_url
-  const initials = user.full_name ? getInitials(user.full_name) : (user.email?.[0] || '?').toUpperCase()
-  const [avatarError, setAvatarError] = useState(false)
 
   async function handleSave() {
     setSaving(true)
@@ -123,13 +112,7 @@ function ProfileSection({ user }: { user: any }) {
 
       <div className="flex items-center gap-4">
         <div className="relative">
-          {avatarUrl && !avatarError ? (
-            <img src={avatarUrl} alt="Avatar" className="h-16 w-16 rounded-full object-cover" onError={() => setAvatarError(true)} />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-semibold">
-              {initials}
-            </div>
-          )}
+          <UserAvatar avatarUrl={avatarUrl} name={user.full_name} email={user.email} size="lg" />
         </div>
         <div>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />

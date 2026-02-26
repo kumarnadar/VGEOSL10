@@ -116,19 +116,34 @@ export function GroupsTab() {
   })
 
   async function handleCreate() {
-    await supabase.from('groups').insert({ name, description, geography, meeting_cadence: cadence })
+    const { error } = await supabase.from('groups').insert({ name, description, geography, meeting_cadence: cadence })
+    if (error) {
+      toast.error('Failed to create group')
+      return
+    }
+    toast.success('Group created')
     setName('')
     setDescription('')
     mutate('admin-groups')
   }
 
   async function addMember(groupId: string, userId: string) {
-    await supabase.from('group_members').insert({ group_id: groupId, user_id: userId, role_in_group: 'member' })
+    const { error } = await supabase.from('group_members').insert({ group_id: groupId, user_id: userId, role_in_group: 'member' })
+    if (error) {
+      toast.error('Failed to add member')
+      return
+    }
+    toast.success('Member added')
     mutate('admin-groups')
   }
 
   async function removeMember(membershipId: string) {
-    await supabase.from('group_members').delete().eq('id', membershipId)
+    const { error } = await supabase.from('group_members').delete().eq('id', membershipId)
+    if (error) {
+      toast.error('Failed to remove member')
+      return
+    }
+    toast.success('Member removed')
     mutate('admin-groups')
   }
 

@@ -41,6 +41,24 @@ export function useScorecardTemplate(groupId: string) {
   )
 }
 
+/** Fetch the active template for a group and return its measure IDs. */
+async function getMeasureIdsForGroup(
+  supabase: ReturnType<typeof createClient>,
+  groupId: string
+): Promise<string[]> {
+  const { data: template } = await supabase
+    .from('scorecard_templates')
+    .select('scorecard_sections(scorecard_measures(id))')
+    .eq('group_id', groupId)
+    .eq('is_active', true)
+    .single()
+
+  if (!template) return []
+
+  return template.scorecard_sections
+    ?.flatMap((s: any) => s.scorecard_measures?.map((m: any) => m.id) || []) || []
+}
+
 export function useScorecardEntries(groupId: string, weekEndings: string[]) {
   const supabase = createClient()
 
@@ -49,19 +67,7 @@ export function useScorecardEntries(groupId: string, weekEndings: string[]) {
       ? `scorecard-entries-${groupId}-${weekEndings.join(',')}`
       : null,
     async () => {
-      // First get all measure IDs for this group's template
-      const { data: template } = await supabase
-        .from('scorecard_templates')
-        .select('scorecard_sections(scorecard_measures(id))')
-        .eq('group_id', groupId)
-        .eq('is_active', true)
-        .single()
-
-      if (!template) return []
-
-      const measureIds = template.scorecard_sections
-        ?.flatMap((s: any) => s.scorecard_measures?.map((m: any) => m.id) || []) || []
-
+      const measureIds = await getMeasureIdsForGroup(supabase, groupId)
       if (measureIds.length === 0) return []
 
       const { data, error } = await supabase
@@ -83,19 +89,7 @@ export function useScorecardGoals(groupId: string, quarter: string) {
   return useSWR(
     groupId && quarter ? `scorecard-goals-${groupId}-${quarter}` : null,
     async () => {
-      // Get measure IDs for this group
-      const { data: template } = await supabase
-        .from('scorecard_templates')
-        .select('scorecard_sections(scorecard_measures(id))')
-        .eq('group_id', groupId)
-        .eq('is_active', true)
-        .single()
-
-      if (!template) return []
-
-      const measureIds = template.scorecard_sections
-        ?.flatMap((s: any) => s.scorecard_measures?.map((m: any) => m.id) || []) || []
-
+      const measureIds = await getMeasureIdsForGroup(supabase, groupId)
       if (measureIds.length === 0) return []
 
       const { data, error } = await supabase
