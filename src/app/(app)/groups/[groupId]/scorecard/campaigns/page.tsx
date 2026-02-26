@@ -123,11 +123,7 @@ export default function CampaignsPage() {
                   <span className="text-sm text-muted-foreground">{idx + 1}.</span>
                   <span className="font-medium">{campaign.name}</span>
                   <Badge
-                    variant="outline"
-                    className={campaign.status === 'active'
-                      ? 'bg-green-50 text-green-700 border-green-200'
-                      : 'bg-gray-50 text-gray-500 border-gray-200'
-                    }
+                    variant={campaign.status === 'active' ? 'success' : 'inactive'}
                   >
                     {campaign.status}
                   </Badge>

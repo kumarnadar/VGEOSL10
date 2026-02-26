@@ -113,7 +113,7 @@ export function RocksByGroupTable({ data }: { data: RocksByGroupRow[] }) {
                     ) : row.groupName}
                   </td>
                   <td className="text-right py-2">{row.total}</td>
-                  <td className="text-right py-2 text-green-600">
+                  <td className="text-right py-2 text-green-600 dark:text-green-400">
                     <span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1" />
                     {row.groupId ? (
                       <Link href={`/groups/${row.groupId}/rocks?status=on_track`} className="hover:underline">
@@ -121,7 +121,7 @@ export function RocksByGroupTable({ data }: { data: RocksByGroupRow[] }) {
                       </Link>
                     ) : row.onTrack}
                   </td>
-                  <td className="text-right py-2 text-red-600">
+                  <td className="text-right py-2 text-red-600 dark:text-red-400">
                     <span className="inline-block h-2 w-2 rounded-full bg-red-500 mr-1" />
                     {row.groupId ? (
                       <Link href={`/groups/${row.groupId}/rocks?status=off_track`} className="hover:underline">
@@ -178,11 +178,11 @@ export function RocksByPersonTable({ data }: { data: RocksByPersonRow[] }) {
                     ) : row.personName}
                   </td>
                   <td className="text-right py-2">{row.total}</td>
-                  <td className="text-right py-2 text-green-600">
+                  <td className="text-right py-2 text-green-600 dark:text-green-400">
                     <span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1" />
                     {row.onTrack}
                   </td>
-                  <td className="text-right py-2 text-red-600">
+                  <td className="text-right py-2 text-red-600 dark:text-red-400">
                     <span className="inline-block h-2 w-2 rounded-full bg-red-500 mr-1" />
                     {row.offTrack}
                   </td>

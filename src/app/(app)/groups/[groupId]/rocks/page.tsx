@@ -178,7 +178,9 @@ export default function RocksPage() {
                   <TableRow
                     key={rock.id}
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    tabIndex={0}
                     onClick={() => router.push(`/groups/${groupId}/rocks/${rock.id}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/groups/${groupId}/rocks/${rock.id}`) } }}
                   >
                     <TableCell className="font-medium">
                       {rock.title}
@@ -188,10 +190,7 @@ export default function RocksPage() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant="outline"
-                        className={rock.status === 'on_track'
-                          ? 'bg-green-50 text-green-700 border-green-200'
-                          : 'bg-red-50 text-red-700 border-red-200'}
+                        variant={rock.status === 'on_track' ? 'success' : 'danger'}
                       >
                         {rock.status === 'on_track' ? 'On Track' : 'Off Track'}
                       </Badge>

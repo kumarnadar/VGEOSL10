@@ -57,6 +57,7 @@ function ProfileSection({ user }: { user: any }) {
 
   const avatarUrl = user.avatar_url
   const initials = user.full_name ? getInitials(user.full_name) : (user.email?.[0] || '?').toUpperCase()
+  const [avatarError, setAvatarError] = useState(false)
 
   async function handleSave() {
     setSaving(true)
@@ -122,8 +123,8 @@ function ProfileSection({ user }: { user: any }) {
 
       <div className="flex items-center gap-4">
         <div className="relative">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="Avatar" className="h-16 w-16 rounded-full object-cover" />
+          {avatarUrl && !avatarError ? (
+            <img src={avatarUrl} alt="Avatar" className="h-16 w-16 rounded-full object-cover" onError={() => setAvatarError(true)} />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-semibold">
               {initials}

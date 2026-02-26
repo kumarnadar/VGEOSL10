@@ -44,7 +44,13 @@ export function TrendLineChart({ data, goalPacePerWeek, dataType, label }: Trend
             <YAxis tickFormatter={formatTick} tick={{ fontSize: 12 }} />
             <Tooltip
               formatter={(value: any) => [formatTick(Number(value)), 'Value']}
-              contentStyle={{ fontSize: 12 }}
+              contentStyle={{
+                fontSize: 12,
+                backgroundColor: 'var(--popover)',
+                color: 'var(--popover-foreground)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+              }}
             />
             <Line
               type="monotone"

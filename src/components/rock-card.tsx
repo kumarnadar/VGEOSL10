@@ -43,10 +43,7 @@ export function RockCard({ rock, groupId, readOnly = false }: RockCardProps) {
               className="shrink-0"
             >
               <Badge
-                variant="outline"
-                className={rock.status === 'on_track'
-                  ? 'bg-green-50 text-green-700 border-green-200'
-                  : 'bg-red-50 text-red-700 border-red-200'}
+                variant={rock.status === 'on_track' ? 'success' : 'danger'}
               >
                 {rock.status === 'on_track' ? 'On Track' : 'Off Track'}
               </Badge>
@@ -54,10 +51,7 @@ export function RockCard({ rock, groupId, readOnly = false }: RockCardProps) {
           )}
           {readOnly && (
             <Badge
-              variant="outline"
-              className={rock.status === 'on_track'
-                ? 'bg-green-50 text-green-700 border-green-200'
-                : 'bg-red-50 text-red-700 border-red-200'}
+              variant={rock.status === 'on_track' ? 'success' : 'danger'}
             >
               {rock.status === 'on_track' ? 'On Track' : 'Off Track'}
             </Badge>

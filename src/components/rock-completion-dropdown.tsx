@@ -74,7 +74,7 @@ export function RockCompletionDropdown({ rock, groupId }: RockCompletionDropdown
           </DialogHeader>
           {rollResult ? (
             <div className="space-y-4">
-              <p className="text-sm text-green-600">Rock rolled forward successfully.</p>
+              <p className="text-sm text-green-600 dark:text-green-400">Rock rolled forward successfully.</p>
               <Button
                 onClick={() => {
                   setRollForwardOpen(false)

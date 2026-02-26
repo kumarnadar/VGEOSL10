@@ -93,7 +93,7 @@ export function DetailLineItemsPanel({
         <div className="p-4 space-y-4">
           {/* Sum mismatch warning */}
           {hasMismatch && (
-            <div className="flex items-center gap-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
+            <div className="flex items-center gap-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 dark:bg-yellow-950/30 dark:border-yellow-800 dark:text-yellow-300 text-sm">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>
                 Line items sum ({formatCurrencyFull(lineItemSum)}) does not match entry value ({formatCurrencyFull(entryValue)})

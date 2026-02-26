@@ -41,7 +41,7 @@ export function TodoList({ groupId }: TodoListProps) {
       {openTodos.map((todo: any) => {
         const isOverdue = todo.due_date < today
         return (
-          <div key={todo.id} className={cn('flex items-start gap-3 rounded-lg border p-3', isOverdue && 'border-red-200 bg-red-50')}>
+          <div key={todo.id} className={cn('flex items-start gap-3 rounded-lg border p-3', isOverdue && 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30')}>
             <input
               type="checkbox"
               checked={false}
@@ -53,7 +53,7 @@ export function TodoList({ groupId }: TodoListProps) {
               <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                 <span>{todo.assigned_to?.full_name}</span>
                 <span>·</span>
-                <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                <span className={isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
                   Due: {todo.due_date}
                 </span>
                 {todo.source_issue?.description && (

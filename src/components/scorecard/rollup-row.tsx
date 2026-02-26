@@ -93,13 +93,8 @@ export function RollupRow({
         <td className="text-right px-3 py-2">
           {pctToGoal != null ? (
             <Badge
-              variant="outline"
-              className={cn(
-                'text-xs',
-                pctToGoal >= 0.9 ? 'bg-green-50 text-green-700 border-green-200' :
-                pctToGoal >= 0.7 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                'bg-red-50 text-red-700 border-red-200'
-              )}
+              variant={pctToGoal >= 0.9 ? 'success' : pctToGoal >= 0.7 ? 'warning' : 'danger'}
+              className="text-xs"
             >
               {(pctToGoal * 100).toFixed(0)}%
             </Badge>

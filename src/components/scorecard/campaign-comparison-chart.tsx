@@ -34,7 +34,15 @@ export function CampaignComparisonChart({ campaigns }: CampaignComparisonChartPr
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
             <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip contentStyle={{ fontSize: 12 }} />
+            <Tooltip
+              contentStyle={{
+                fontSize: 12,
+                backgroundColor: 'var(--popover)',
+                color: 'var(--popover-foreground)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+              }}
+            />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar dataKey="outreach" fill={COLORS.outreach} name="Outreach" />
             <Bar dataKey="connects" fill={COLORS.connects} name="Connects" />

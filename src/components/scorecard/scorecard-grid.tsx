@@ -291,6 +291,7 @@ function ScorecardSection({
                   'text-right px-3 py-1.5 text-muted-foreground',
                   onGoalEdit && 'cursor-pointer hover:text-primary hover:underline'
                 )}
+                tabIndex={onGoalEdit ? 0 : undefined}
                 onClick={() => onGoalEdit && onGoalEdit(
                   goalIdMap.get(measure.id) || null,
                   measure.id,
@@ -298,6 +299,7 @@ function ScorecardSection({
                   measure.data_type,
                   goal ?? null,
                 )}
+                onKeyDown={onGoalEdit ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGoalEdit(goalIdMap.get(measure.id) || null, measure.id, measure.name, measure.data_type, goal ?? null) } } : undefined}
               >
                 {goal != null ? formatValue(goal, measure.data_type) : '-'}
               </td>
@@ -329,6 +331,7 @@ function ScorecardSection({
                       readOnly={readOnly}
                     >
                       <button
+                        aria-label={`Enter value for ${measure.name}`}
                         className={cn(
                           'w-full text-right cursor-pointer hover:bg-primary/5 rounded px-1 py-0.5',
                           aggValue === 0 && 'text-muted-foreground'
@@ -350,13 +353,8 @@ function ScorecardSection({
               <td className="text-right px-3 py-1.5">
                 {pctToGoal != null ? (
                   <Badge
-                    variant="outline"
-                    className={cn(
-                      'text-xs',
-                      pctToGoal >= 0.9 ? 'bg-green-50 text-green-700 border-green-200' :
-                      pctToGoal >= 0.7 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                      'bg-red-50 text-red-700 border-red-200'
-                    )}
+                    variant={pctToGoal >= 0.9 ? 'success' : pctToGoal >= 0.7 ? 'warning' : 'danger'}
+                    className="text-xs"
                   >
                     {(pctToGoal * 100).toFixed(0)}%
                   </Badge>

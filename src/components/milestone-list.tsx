@@ -74,10 +74,10 @@ export function MilestoneList({ rockId, readOnly = false }: MilestoneListProps) 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading milestones...</p>
 
   const statusColors: Record<string, string> = {
-    not_started: 'text-gray-500',
+    not_started: 'text-gray-500 dark:text-gray-400',
     wip: 'text-primary',
-    done: 'text-green-600',
-    delayed: 'text-red-600',
+    done: 'text-green-600 dark:text-green-400',
+    delayed: 'text-red-600 dark:text-red-400',
   }
 
   return (

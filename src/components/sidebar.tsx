@@ -97,6 +97,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const userDisplayName = user.full_name || user.email || ''
   const userInitials = user.full_name ? getInitials(user.full_name) : (user.email?.[0] || '?').toUpperCase()
   const avatarUrl = user.avatar_url
+  const [avatarError, setAvatarError] = useState(false)
 
   return (
     <div className="flex h-full flex-col">
@@ -115,8 +116,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-2 rounded-md px-1 py-1 hover:bg-sidebar-accent transition-colors">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                {avatarUrl && !avatarError ? (
+                  <img src={avatarUrl} alt="Avatar" className="h-8 w-8 shrink-0 rounded-full object-cover" onError={() => setAvatarError(true)} />
                 ) : (
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
                     {userInitials}
@@ -248,7 +249,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           size="icon"
           className="h-8 w-8"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          title="Toggle theme"
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

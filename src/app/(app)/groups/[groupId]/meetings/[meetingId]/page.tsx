@@ -70,10 +70,10 @@ export default function MeetingViewPage() {
     : null
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col lg:flex-row gap-6">
       {/* Agenda sidebar */}
-      <div className="w-56 shrink-0">
-        <div className="sticky top-6">
+      <div className="w-full lg:w-56 lg:shrink-0">
+        <div className="lg:sticky lg:top-6">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="mb-4">
             &larr; Back
           </Button>
@@ -172,8 +172,9 @@ export default function MeetingViewPage() {
               <textarea
                 defaultValue={meeting.notes || ''}
                 onBlur={(e) => updateNotes(e.target.value)}
-                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Meeting notes..."
+                aria-label="Meeting notes"
               />
             </div>
 

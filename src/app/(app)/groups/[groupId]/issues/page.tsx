@@ -161,8 +161,11 @@ export default function IssuesPage() {
                   {filteredIssues.map((issue: any) => (
                     <tr
                       key={issue.id}
+                      role="button"
+                      tabIndex={0}
                       className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${issue.status === 'closed' ? 'opacity-60' : ''}`}
                       onClick={() => handleRowClick(issue)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(issue) } }}
                     >
                       <td className="py-2.5 px-3 text-muted-foreground font-mono text-xs">
                         {issue.priority || '-'}
