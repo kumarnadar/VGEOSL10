@@ -44,19 +44,29 @@ export function RollupRow({
           'border-t cursor-pointer transition-colors',
           level === 'company' ? 'bg-primary/10 font-semibold' : 'bg-muted/40 font-medium'
         )}
-        onClick={() => setExpanded(!expanded)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setExpanded((prev) => !prev)
+        }}
       >
         {/* Label with expand/collapse icon */}
         <td className="sticky left-0 z-10 px-3 py-2 text-left whitespace-nowrap"
           style={{ backgroundColor: 'inherit' }}
         >
-          <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 w-full text-left bg-transparent border-none p-0 font-inherit cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation()
+              setExpanded((prev) => !prev)
+            }}
+          >
             {expanded
               ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
               : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             }
             <span>{label}</span>
-          </div>
+          </button>
         </td>
 
         {/* Goal total */}

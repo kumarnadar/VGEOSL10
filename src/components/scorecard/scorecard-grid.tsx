@@ -75,6 +75,15 @@ export function ScorecardGrid({
             })
             map.set(`${m.id}-${week}`, sum)
           })
+        } else if (formula.type === 'ratio' && formula.numerator && formula.denominator) {
+          weekEndings.forEach((week) => {
+            const numId = nameToId.get(formula.numerator)
+            const denId = nameToId.get(formula.denominator)
+            const numerator = numId ? (map.get(`${numId}-${week}`) || 0) : 0
+            const denominator = denId ? (map.get(`${denId}-${week}`) || 0) : 0
+            const ratio = denominator > 0 ? numerator / denominator : 0
+            map.set(`${m.id}-${week}`, ratio)
+          })
         }
       })
     })
@@ -103,28 +112,56 @@ export function ScorecardGrid({
     return map
   }, [goals])
 
+  // Build a lookup of measure id -> measure object for formula access
+  const measureById = useMemo(() => {
+    const map = new Map<string, any>()
+    template?.scorecard_sections?.forEach((s: any) => {
+      s.scorecard_measures?.forEach((m: any) => {
+        map.set(m.id, m)
+      })
+    })
+    return map
+  }, [template])
+
+  // Build name->id lookup per section for ratio total computation
+  const sectionNameToId = useMemo(() => {
+    const map = new Map<string, Map<string, string>>()
+    template?.scorecard_sections?.forEach((s: any) => {
+      const nameMap = new Map<string, string>()
+      s.scorecard_measures?.forEach((m: any) => {
+        nameMap.set(m.name, m.id)
+      })
+      s.scorecard_measures?.forEach((m: any) => {
+        map.set(m.id, nameMap)
+      })
+    })
+    return map
+  }, [template])
+
   // Calculate total for a measure across visible weeks (from aggregateMap)
+  // For ratio measures, compute total as overall numerator / overall denominator
   const getMeasureTotal = useCallback((measureId: string) => {
+    const measure = measureById.get(measureId)
+    const formula = measure?.calculation_formula
+    if (formula?.type === 'ratio' && formula.numerator && formula.denominator) {
+      const nameMap = sectionNameToId.get(measureId)
+      const numId = nameMap?.get(formula.numerator)
+      const denId = nameMap?.get(formula.denominator)
+      if (numId && denId) {
+        let totalNum = 0, totalDen = 0
+        weekEndings.forEach((week) => {
+          totalNum += aggregateMap.get(`${numId}-${week}`) || 0
+          totalDen += aggregateMap.get(`${denId}-${week}`) || 0
+        })
+        return totalDen > 0 ? totalNum / totalDen : 0
+      }
+    }
     let total = 0
     weekEndings.forEach((week) => {
       total += aggregateMap.get(`${measureId}-${week}`) || 0
     })
     return total
-  }, [weekEndings, aggregateMap])
-
-  // Compute company-level rollup across all sections
-  const companyRollup = useMemo(() => {
-    const allMeasureIds: string[] = []
-    template?.scorecard_sections?.forEach((s: any) => {
-      s.scorecard_measures?.forEach((m: any) => {
-        if (!m.is_calculated) allMeasureIds.push(m.id)
-      })
-    })
-    return {
-      weekTotals: computeRollupTotals(allMeasureIds, weekEndings, rollupEntryMap),
-      goalTotal: computeGoalTotal(allMeasureIds, goalMap),
-    }
-  }, [template, weekEndings, rollupEntryMap, goalMap])
+  }, [weekEndings, aggregateMap, measureById, sectionNameToId])
 
   if (!template?.scorecard_sections) return null
 
@@ -147,35 +184,25 @@ export function ScorecardGrid({
           </tr>
         </thead>
         <tbody>
-          <RollupRow
-            label="Company Total"
-            level="company"
-            weekEndings={weekEndings}
-            weekTotals={companyRollup.weekTotals}
-            goalTotal={companyRollup.goalTotal}
-            dataType="currency"
-            defaultExpanded={true}
-          >
-            {template.scorecard_sections.map((section: any) => (
-              <ScorecardSection
-                key={section.id}
-                section={section}
-                weekEndings={weekEndings}
-                rollupEntryMap={rollupEntryMap}
-                aggregateMap={aggregateMap}
-                userEntryMap={userEntryMap}
-                goalMap={goalMap}
-                goalIdMap={goalIdMap}
-                members={members || []}
-                groupId={groupId}
-                readOnly={readOnly}
-                getMeasureTotal={getMeasureTotal}
-                onDetailClick={onCellClick}
-                onCreateIssue={onCreateIssue}
-                onGoalEdit={onGoalEdit}
-              />
-            ))}
-          </RollupRow>
+          {template.scorecard_sections.map((section: any) => (
+            <ScorecardSection
+              key={section.id}
+              section={section}
+              weekEndings={weekEndings}
+              rollupEntryMap={rollupEntryMap}
+              aggregateMap={aggregateMap}
+              userEntryMap={userEntryMap}
+              goalMap={goalMap}
+              goalIdMap={goalIdMap}
+              members={members || []}
+              groupId={groupId}
+              readOnly={readOnly}
+              getMeasureTotal={getMeasureTotal}
+              onDetailClick={onCellClick}
+              onCreateIssue={onCreateIssue}
+              onGoalEdit={onGoalEdit}
+            />
+          ))}
         </tbody>
       </table>
     </div>
@@ -217,10 +244,16 @@ function ScorecardSection({
 }: ScorecardSectionProps) {
   const measures = section.scorecard_measures || []
 
-  // Compute team-level rollup for this section
-  const sectionMeasureIds = measures.filter((m: any) => !m.is_calculated).map((m: any) => m.id)
+  // Compute team-level rollup for this section (exclude calculated and percentage measures)
+  const sectionMeasureIds = measures.filter((m: any) => !m.is_calculated && m.data_type !== 'percentage').map((m: any) => m.id)
   const sectionWeekTotals = computeRollupTotals(sectionMeasureIds, weekEndings, rollupEntryMap)
   const sectionGoalTotal = computeGoalTotal(sectionMeasureIds, goalMap)
+
+  // Determine dominant data type for rollup display
+  // If all non-calculated measures share a type, use it; otherwise show plain numbers
+  const nonCalcMeasures = measures.filter((m: any) => !m.is_calculated)
+  const dataTypes = new Set(nonCalcMeasures.map((m: any) => m.data_type))
+  const sectionDataType = dataTypes.size === 1 ? nonCalcMeasures[0]?.data_type || 'count' : 'count'
 
   return (
     <>
@@ -230,7 +263,7 @@ function ScorecardSection({
         weekEndings={weekEndings}
         weekTotals={sectionWeekTotals}
         goalTotal={sectionGoalTotal}
-        dataType="currency"
+        dataType={sectionDataType}
         defaultExpanded={true}
       >
         {measures.map((measure: any) => {
