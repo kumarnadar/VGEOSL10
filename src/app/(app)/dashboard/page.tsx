@@ -22,12 +22,15 @@ export default function DashboardPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [top10DialogOpen, setTop10DialogOpen] = useState(false)
 
-  // Compute current week Monday
+  // Compute current week Monday (local time, avoid UTC shift from toISOString)
   const currentWeekMonday = (() => {
     const today = new Date()
     const monday = new Date(today)
     monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    return monday.toISOString().split('T')[0]
+    const y = monday.getFullYear()
+    const m = String(monday.getMonth() + 1).padStart(2, '0')
+    const d = String(monday.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
   })()
 
   useEffect(() => {
@@ -86,20 +89,38 @@ export default function DashboardPage() {
     }
   )
 
-  const { data: focusSnapshots } = useSWR(
-    `dashboard-focus-${currentWeekMonday}-${selectedGroupId || 'all'}`,
+  const { data: focusData } = useSWR(
+    `dashboard-focus-${selectedGroupId || 'all'}`,
     async () => {
+      // First, find the most recent week_date that has snapshots
+      let weekQuery = supabase
+        .from('focus_snapshots')
+        .select('week_date')
+        .order('week_date', { ascending: false })
+        .limit(1)
+      if (selectedGroupId) {
+        weekQuery = weekQuery.eq('group_id', selectedGroupId)
+      }
+      const { data: weekRow } = await weekQuery
+      const latestWeek = weekRow?.[0]?.week_date
+      if (!latestWeek) return { snapshots: [], weekDate: null }
+
+      // Now fetch all snapshots for that week
       let query = supabase
         .from('focus_snapshots')
         .select('*, user:profiles!user_id(id, full_name), group:groups!group_id(id, name), focus_items(*)')
-        .eq('week_date', currentWeekMonday)
+        .eq('week_date', latestWeek)
       if (selectedGroupId) {
         query = query.eq('group_id', selectedGroupId)
       }
       const { data } = await query
-      return data || []
+      return { snapshots: data || [], weekDate: latestWeek }
     }
   )
+
+  const focusSnapshots = focusData?.snapshots || []
+  const focusWeekDate = focusData?.weekDate || null
+  const isCurrentWeekFocus = focusWeekDate === currentWeekMonday
 
   // Aggregate rocks by group
   const rocksByGroup: Record<string, { groupName: string; groupId: string; total: number; onTrack: number; offTrack: number }> = {}
@@ -135,12 +156,19 @@ export default function DashboardPage() {
   const pctOnTrack = totalRocks > 0 ? `${onTrackPct}%` : '-'
 
   // Top 10 items count
-  const top10ItemCount = focusSnapshots?.reduce(
+  const top10ItemCount = focusSnapshots.reduce(
     (sum: number, snap: any) => sum + (snap.focus_items?.length || 0), 0
   ) || 0
 
+  // Top 10 subtitle: show week date for context
+  const top10Subtitle = focusWeekDate
+    ? isCurrentWeekFocus
+      ? 'This week'
+      : `Week of ${new Date(focusWeekDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    : 'No data'
+
   // Prepare dialog snapshots
-  const top10DialogSnapshots = (focusSnapshots || []).map((snap: any) => ({
+  const top10DialogSnapshots = focusSnapshots.map((snap: any) => ({
     userName: snap.user?.full_name || 'Unknown',
     groupName: snap.group?.name || 'Unknown',
     items: (snap.focus_items || [])
@@ -218,7 +246,7 @@ export default function DashboardPage() {
         <DashboardCard
           title="Top 10 Items"
           value={top10ItemCount}
-          subtitle="This week"
+          subtitle={top10Subtitle}
           icon={<ListChecks className="h-5 w-5" />}
           accent="purple"
           onClick={() => setTop10DialogOpen(true)}

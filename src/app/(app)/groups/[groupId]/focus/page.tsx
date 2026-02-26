@@ -36,7 +36,7 @@ export default function FocusPage() {
     const today = new Date()
     const monday = new Date(today)
     monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    const thisMonday = monday.toISOString().split('T')[0]
+    const thisMonday = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
     return currentWeekDate === thisMonday
   })()
 
@@ -70,7 +70,7 @@ export default function FocusPage() {
     const today = new Date()
     const monday = new Date(today)
     monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    const weekDate = monday.toISOString().split('T')[0]
+    const weekDate = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
 
     await supabase.rpc('start_new_week', {
       p_user_id: user.id,
@@ -90,7 +90,7 @@ export default function FocusPage() {
     const today = new Date()
     const monday = new Date(today)
     monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    const weekDate = monday.toISOString().split('T')[0]
+    const weekDate = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
 
     await supabase.from('focus_snapshots').insert({
       user_id: user.id,

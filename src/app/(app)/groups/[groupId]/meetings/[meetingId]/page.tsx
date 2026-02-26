@@ -40,7 +40,15 @@ export default function MeetingViewPage() {
   const { data: quarters } = useQuarters()
   const currentQuarter = quarters?.find((q: any) => q.is_current)
   const { data: rocks } = useRocks(groupId, currentQuarter?.id || null)
-  const { data: focusSnapshots } = useGroupFocusSnapshots(groupId, meeting?.meeting_date || null)
+  // Convert meeting date to the Monday of that week (focus snapshots are always Monday-anchored)
+  const meetingWeekMonday = meeting?.meeting_date
+    ? (() => {
+        const d = new Date(meeting.meeting_date + 'T00:00:00')
+        d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      })()
+    : null
+  const { data: focusSnapshots } = useGroupFocusSnapshots(groupId, meetingWeekMonday)
 
   async function updateCheckin(attendeeId: string, note: string) {
     await supabase.from('meeting_attendees').update({ checkin_note: note }).eq('id', attendeeId)
