@@ -18,7 +18,7 @@ import { DollarSign, TrendingUp, Briefcase, Trophy } from 'lucide-react'
 interface ZohoRevenue {
   pipeline: { count: number; value: number }
   won: { count: number; value: number }
-  weeklyTrend: { week: string; pipeline: number; won: number }[]
+  quarterlyTrend: { quarter: string; pipeline: number; won: number }[]
   lastUpdated: string
 }
 
@@ -85,7 +85,7 @@ export function ZohoCrmSection() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            CRM Revenue
+            CRM Revenue — {new Date().getFullYear()}
           </CardTitle>
           <span className="text-xs text-muted-foreground">
             Updated {new Date(data.lastUpdated).toLocaleTimeString()}
@@ -97,9 +97,9 @@ export function ZohoCrmSection() {
           {/* Left: Bar chart */}
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.weeklyTrend} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <BarChart data={data.quarterlyTrend} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="quarter" tick={{ fontSize: 12 }} />
                 <YAxis
                   tickFormatter={(v) => formatCurrency(v)}
                   tick={{ fontSize: 12 }}

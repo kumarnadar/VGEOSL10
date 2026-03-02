@@ -8,6 +8,7 @@ import { useUser } from '@/hooks/use-user'
 import { DashboardCard, RocksByGroupTable, RocksByPersonTable } from '@/components/dashboard-grid'
 import { QuarterSelector } from '@/components/quarter-selector'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useState, useEffect } from 'react'
 import { Target, TrendingUp, AlertCircle, Star, LayoutDashboard, ListChecks } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [top10DialogOpen, setTop10DialogOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('dashboard')
 
   // Compute current week Monday (local time, avoid UTC shift from toISOString)
   const currentWeekMonday = (() => {
@@ -132,23 +134,6 @@ export default function DashboardPage() {
   const focusWeekDate = focusData?.weekDate || null
   const isCurrentWeekFocus = focusWeekDate === currentWeekMonday
 
-  // Fetch show_zoho_crm flags for user's groups (not included in user hook's group select)
-  const groupIds = groups.map((g: any) => g.id).filter(Boolean)
-  const { data: groupCrmFlags } = useSWR(
-    groupIds.length > 0 ? `dashboard-crm-flags-${groupIds.join(',')}` : null,
-    async () => {
-      const { data } = await supabase
-        .from('groups')
-        .select('id, show_zoho_crm')
-        .in('id', groupIds)
-      return data || []
-    }
-  )
-
-  const showZohoCrm = (groupCrmFlags || []).some((g: any) =>
-    selectedGroupId ? g.id === selectedGroupId && g.show_zoho_crm : g.show_zoho_crm
-  )
-
   // Generic rock aggregation helper: groups rocks by a key and counts on/off track
   function aggregateRocks<T extends Record<string, unknown>>(
     keyFn: (rock: any) => string,
@@ -232,88 +217,100 @@ export default function DashboardPage() {
           <LayoutDashboard className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-semibold">Dashboard</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={selectedGroupId || 'all'} onValueChange={(v) => setSelectedGroupId(v === 'all' ? null : v)}>
-            <SelectTrigger className="w-36 sm:w-44">
-              <SelectValue placeholder="All Groups" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Groups</SelectItem>
-              {groups.map((g: any) => (
-                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <QuarterSelector value={selectedQuarter} onChange={setSelectedQuarter} />
-        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 animate-stagger">
-        <DashboardCard
-          title="Total Rocks"
-          value={totalRocks}
-          icon={<Target className="h-5 w-5" />}
-          accent="blue"
-          href={selectedGroupId ? `/groups/${selectedGroupId}/rocks` : undefined}
-        />
-        <DashboardCard
-          title="On Track"
-          value={onTrackRocks}
-          subtitle={pctOnTrack}
-          icon={<TrendingUp className="h-5 w-5" />}
-          accent="green"
-          progress={onTrackPct}
-          href={selectedGroupId ? `/groups/${selectedGroupId}/rocks?status=on_track` : undefined}
-        />
-        <DashboardCard
-          title="Open Issues"
-          value={openIssueCount || 0}
-          icon={<AlertCircle className="h-5 w-5" />}
-          accent="red"
-          href={selectedGroupId ? `/groups/${selectedGroupId}/issues` : undefined}
-        />
-        <DashboardCard
-          title="Last Meeting Score"
-          value={recentMeetings?.[0]?.average_score ? Number(recentMeetings[0].average_score).toFixed(1) : '-'}
-          subtitle={recentMeetings?.[0]?.group?.name}
-          icon={<Star className="h-5 w-5" />}
-          accent="amber"
-          href={selectedGroupId && recentMeetings?.[0] ? `/groups/${selectedGroupId}/meetings/${recentMeetings[0].id}` : undefined}
-        />
-        <DashboardCard
-          title="Top 10 Items"
-          value={top10ItemCount}
-          subtitle={top10Subtitle}
-          icon={<ListChecks className="h-5 w-5" />}
-          accent="purple"
-          onClick={() => setTop10DialogOpen(true)}
-        />
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="zoho">Zoho CRM</TabsTrigger>
+        </TabsList>
 
-      {showZohoCrm && <ZohoCrmSection />}
-
-      <div className={`grid gap-6 ${selectedGroupId ? '' : 'lg:grid-cols-2'} animate-stagger`}>
-        {!selectedGroupId && <RocksByGroupTable data={rocksByGroupData} />}
-        <RocksByPersonTable data={rocksByPersonData} />
-      </div>
-
-      {recentMeetings && recentMeetings.length > 0 && (
-        <Card className="card-hover animate-fade-in p-4">
-          <h3 className="font-semibold mb-3">Recent Meetings</h3>
-          <div className="space-y-2 table-striped">
-            {recentMeetings.map((m, i) => (
-              <Link
-                key={i}
-                href={`/groups/${m.group_id}/meetings/${m.id}`}
-                className="flex items-center justify-between text-sm border-b pb-2 hover:bg-muted/50 rounded-md px-2 -mx-2"
-              >
-                <span>{m.meeting_date} - {m.group?.name}</span>
-                <span className="font-medium">{m.average_score ? `${Number(m.average_score).toFixed(1)}/10` : 'No scores'}</span>
-              </Link>
-            ))}
+        <TabsContent value="dashboard" className="space-y-6 mt-4">
+          <div className="flex items-center gap-2 justify-end">
+            <Select value={selectedGroupId || 'all'} onValueChange={(v) => setSelectedGroupId(v === 'all' ? null : v)}>
+              <SelectTrigger className="w-36 sm:w-44">
+                <SelectValue placeholder="All Groups" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Groups</SelectItem>
+                {groups.map((g: any) => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <QuarterSelector value={selectedQuarter} onChange={setSelectedQuarter} />
           </div>
-        </Card>
-      )}
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 animate-stagger">
+            <DashboardCard
+              title="Total Rocks"
+              value={totalRocks}
+              icon={<Target className="h-5 w-5" />}
+              accent="blue"
+              href={selectedGroupId ? `/groups/${selectedGroupId}/rocks` : undefined}
+            />
+            <DashboardCard
+              title="On Track"
+              value={onTrackRocks}
+              subtitle={pctOnTrack}
+              icon={<TrendingUp className="h-5 w-5" />}
+              accent="green"
+              progress={onTrackPct}
+              href={selectedGroupId ? `/groups/${selectedGroupId}/rocks?status=on_track` : undefined}
+            />
+            <DashboardCard
+              title="Open Issues"
+              value={openIssueCount || 0}
+              icon={<AlertCircle className="h-5 w-5" />}
+              accent="red"
+              href={selectedGroupId ? `/groups/${selectedGroupId}/issues` : undefined}
+            />
+            <DashboardCard
+              title="Last Meeting Score"
+              value={recentMeetings?.[0]?.average_score ? Number(recentMeetings[0].average_score).toFixed(1) : '-'}
+              subtitle={recentMeetings?.[0]?.group?.name}
+              icon={<Star className="h-5 w-5" />}
+              accent="amber"
+              href={selectedGroupId && recentMeetings?.[0] ? `/groups/${selectedGroupId}/meetings/${recentMeetings[0].id}` : undefined}
+            />
+            <DashboardCard
+              title="Top 10 Items"
+              value={top10ItemCount}
+              subtitle={top10Subtitle}
+              icon={<ListChecks className="h-5 w-5" />}
+              accent="purple"
+              onClick={() => setTop10DialogOpen(true)}
+            />
+          </div>
+
+          <div className={`grid gap-6 ${selectedGroupId ? '' : 'lg:grid-cols-2'} animate-stagger`}>
+            {!selectedGroupId && <RocksByGroupTable data={rocksByGroupData} />}
+            <RocksByPersonTable data={rocksByPersonData} />
+          </div>
+
+          {recentMeetings && recentMeetings.length > 0 && (
+            <Card className="card-hover animate-fade-in p-4">
+              <h3 className="font-semibold mb-3">Recent Meetings</h3>
+              <div className="space-y-2 table-striped">
+                {recentMeetings.map((m, i) => (
+                  <Link
+                    key={i}
+                    href={`/groups/${m.group_id}/meetings/${m.id}`}
+                    className="flex items-center justify-between text-sm border-b pb-2 hover:bg-muted/50 rounded-md px-2 -mx-2"
+                  >
+                    <span>{m.meeting_date} - {m.group?.name}</span>
+                    <span className="font-medium">{m.average_score ? `${Number(m.average_score).toFixed(1)}/10` : 'No scores'}</span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="zoho" className="space-y-6 mt-4">
+          <ZohoCrmSection />
+        </TabsContent>
+      </Tabs>
 
       <Top10ReviewDialog
         open={top10DialogOpen}
