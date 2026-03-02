@@ -134,6 +134,21 @@ export default function DashboardPage() {
   const focusWeekDate = focusData?.weekDate || null
   const isCurrentWeekFocus = focusWeekDate === currentWeekMonday
 
+  // Check if any of the user's groups have Zoho CRM enabled
+  const groupIds = groups.map((g: any) => g.id).filter(Boolean)
+  const { data: groupCrmFlags } = useSWR(
+    groupIds.length > 0 ? `dashboard-crm-flags-${groupIds.join(',')}` : null,
+    async () => {
+      const { data } = await supabase
+        .from('groups')
+        .select('id, show_zoho_crm')
+        .in('id', groupIds)
+      return data || []
+    }
+  )
+
+  const showZohoTab = (groupCrmFlags || []).some((g: any) => g.show_zoho_crm)
+
   // Generic rock aggregation helper: groups rocks by a key and counts on/off track
   function aggregateRocks<T extends Record<string, unknown>>(
     keyFn: (rock: any) => string,
@@ -222,7 +237,7 @@ export default function DashboardPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="zoho">Zoho CRM</TabsTrigger>
+          {showZohoTab && <TabsTrigger value="zoho">Zoho CRM</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6 mt-4">
@@ -307,9 +322,11 @@ export default function DashboardPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="zoho" className="space-y-6 mt-4">
-          <ZohoCrmSection />
-        </TabsContent>
+        {showZohoTab && (
+          <TabsContent value="zoho" className="space-y-6 mt-4">
+            <ZohoCrmSection />
+          </TabsContent>
+        )}
       </Tabs>
 
       <Top10ReviewDialog
