@@ -132,6 +132,23 @@ export default function DashboardPage() {
   const focusWeekDate = focusData?.weekDate || null
   const isCurrentWeekFocus = focusWeekDate === currentWeekMonday
 
+  // Fetch show_zoho_crm flags for user's groups (not included in user hook's group select)
+  const groupIds = groups.map((g: any) => g.id).filter(Boolean)
+  const { data: groupCrmFlags } = useSWR(
+    groupIds.length > 0 ? `dashboard-crm-flags-${groupIds.join(',')}` : null,
+    async () => {
+      const { data } = await supabase
+        .from('groups')
+        .select('id, show_zoho_crm')
+        .in('id', groupIds)
+      return data || []
+    }
+  )
+
+  const showZohoCrm = (groupCrmFlags || []).some((g: any) =>
+    selectedGroupId ? g.id === selectedGroupId && g.show_zoho_crm : g.show_zoho_crm
+  )
+
   // Generic rock aggregation helper: groups rocks by a key and counts on/off track
   function aggregateRocks<T extends Record<string, unknown>>(
     keyFn: (rock: any) => string,
@@ -273,7 +290,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <ZohoCrmSection />
+      {showZohoCrm && <ZohoCrmSection />}
 
       <div className={`grid gap-6 ${selectedGroupId ? '' : 'lg:grid-cols-2'} animate-stagger`}>
         {!selectedGroupId && <RocksByGroupTable data={rocksByGroupData} />}

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { UserPicker } from '@/components/user-picker'
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
@@ -29,6 +30,7 @@ function EditGroupDialog({
     description: group.description || '',
     geography: group.geography || 'US',
     cadence: group.meeting_cadence || 'weekly',
+    showZohoCrm: group.show_zoho_crm || false,
   })
 
   async function handleSave() {
@@ -40,6 +42,7 @@ function EditGroupDialog({
         description: form.description,
         geography: form.geography,
         meeting_cadence: form.cadence,
+        show_zoho_crm: form.showZohoCrm,
       })
       .eq('id', group.id)
     setLoading(false)
@@ -89,6 +92,13 @@ function EditGroupDialog({
                 <SelectItem value="monthly">Monthly</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Show Zoho CRM on Dashboard</Label>
+            <Switch
+              checked={form.showZohoCrm}
+              onCheckedChange={(v) => setForm((p) => ({ ...p, showZohoCrm: v }))}
+            />
           </div>
           <Button onClick={handleSave} className="w-full" disabled={loading || !form.name}>
             {loading ? 'Saving...' : 'Save Changes'}
