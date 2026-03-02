@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react'
 import { Target, TrendingUp, AlertCircle, Star, LayoutDashboard, ListChecks } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Top10ReviewDialog } from '@/components/top10-review-dialog'
+import { ZohoCrmSection } from '@/components/zoho-crm-section'
 
 /** Shape returned by the meetings query (Supabase join types not inferred correctly). */
 interface Meeting {
@@ -271,6 +272,8 @@ export default function DashboardPage() {
           onClick={() => setTop10DialogOpen(true)}
         />
       </div>
+
+      <ZohoCrmSection />
 
       <div className={`grid gap-6 ${selectedGroupId ? '' : 'lg:grid-cols-2'} animate-stagger`}>
         {!selectedGroupId && <RocksByGroupTable data={rocksByGroupData} />}
