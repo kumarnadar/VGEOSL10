@@ -38,11 +38,12 @@ export async function getAccessToken(): Promise<string> {
 }
 
 /**
- * Compute the reporting window (previous full week) based on the group's meeting day.
- * The window ends the day before the meeting day and spans 7 days.
+ * Compute the reporting window (past 7 days from the most recent meeting day).
+ * The window starts on the most recent meeting day and ends 6 days later.
  * Example: meeting_day=4 (Thursday), today is March 2 (Sunday):
  *   - Most recent Thursday = Feb 27
- *   - Window: Feb 20 00:00:00 to Feb 26 23:59:59 (Thu–Wed)
+ *   - Window: Feb 27 00:00:00 to Mar 5 23:59:59 (Thu–Wed)
+ * On meeting day itself, shows the current week (today through next 6 days).
  * Returns ISO date strings for Zoho criteria (YYYY-MM-DDTHH:mm:ssZ).
  */
 export function getReportingWindow(meetingDay: number): {
@@ -55,21 +56,16 @@ export function getReportingWindow(meetingDay: number): {
 
   // Days since last meeting day (0 = today is meeting day)
   let daysSinceMeeting = (today - meetingDay + 7) % 7
-  if (daysSinceMeeting === 0) daysSinceMeeting = 7 // if today is meeting day, use previous week
 
-  // The reporting window ends the day before the meeting day
-  // and starts 7 days before that end
-  const meetingDate = new Date(now)
-  meetingDate.setDate(now.getDate() - daysSinceMeeting)
-  meetingDate.setHours(0, 0, 0, 0)
-
-  const windowEnd = new Date(meetingDate)
-  windowEnd.setDate(meetingDate.getDate() - 1)
-  windowEnd.setHours(23, 59, 59, 999)
-
-  const windowStart = new Date(windowEnd)
-  windowStart.setDate(windowEnd.getDate() - 6)
+  // Window starts on the most recent meeting day
+  const windowStart = new Date(now)
+  windowStart.setDate(now.getDate() - daysSinceMeeting)
   windowStart.setHours(0, 0, 0, 0)
+
+  // Window ends 6 days after start (full 7-day span)
+  const windowEnd = new Date(windowStart)
+  windowEnd.setDate(windowStart.getDate() + 6)
+  windowEnd.setHours(23, 59, 59, 999)
 
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
 
