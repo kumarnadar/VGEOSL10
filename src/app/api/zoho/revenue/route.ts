@@ -8,10 +8,48 @@ const CLOSED_WON = 'Closed Won'
 const CLOSED_LOST = 'Closed Lost'
 
 interface ZohoDeal {
+  Deal_Name: string
   Amount: number | null
   Stage: string
   Closing_Date: string | null
   Created_Time: string
+  Owner: { name: string; id: string } | null
+  Account_Name: { name: string } | string | null
+}
+
+interface DrilldownDeal {
+  name: string
+  account: string
+  amount: number
+  stage: string
+  closingDate: string
+}
+
+interface GroupedDrilldown {
+  userName: string
+  items: DrilldownDeal[]
+}
+
+function groupDealsByOwner(deals: ZohoDeal[]): GroupedDrilldown[] {
+  const grouped: Record<string, { userName: string; items: DrilldownDeal[] }> = {}
+
+  for (const d of deals) {
+    const userName = d.Owner?.name || 'Unknown'
+    const key = d.Owner?.id || userName
+
+    if (!grouped[key]) {
+      grouped[key] = { userName, items: [] }
+    }
+    grouped[key].items.push({
+      name: d.Deal_Name || '',
+      account: typeof d.Account_Name === 'object' ? d.Account_Name?.name || '' : String(d.Account_Name || ''),
+      amount: d.Amount || 0,
+      stage: d.Stage,
+      closingDate: d.Closing_Date || '',
+    })
+  }
+
+  return Object.values(grouped).sort((a, b) => b.items.length - a.items.length)
 }
 
 export async function GET() {
@@ -34,14 +72,14 @@ export async function GET() {
   }
 
   try {
-    // Fetch all deals (paginate if needed)
+    // Fetch all deals with detail fields for drilldown (paginate if needed)
     const allDeals: ZohoDeal[] = []
     let page = 1
     let hasMore = true
 
     while (hasMore && page <= 5) {
       const result = await zohoFetch(
-        `/crm/v7/Deals?fields=Amount,Stage,Closing_Date,Created_Time&per_page=200&page=${page}`
+        `/crm/v7/Deals?fields=Deal_Name,Amount,Stage,Closing_Date,Created_Time,Owner,Account_Name&per_page=200&page=${page}`
       )
       if (result.data) {
         allDeals.push(...result.data)
@@ -65,12 +103,11 @@ export async function GET() {
     const sum = (deals: ZohoDeal[]) => deals.reduce((s, d) => s + (d.Amount || 0), 0)
 
     // Quarterly trend: Q1-Q4 for the current year, bucketed by Closing_Date month
-    // Deals with null Closing_Date are excluded from the trend buckets
     function getQuarter(dateStr: string | null): 'Q1' | 'Q2' | 'Q3' | 'Q4' | null {
       if (!dateStr) return null
       const date = new Date(dateStr + 'T00:00:00')
       if (date.getFullYear() !== currentYear) return null
-      const month = date.getMonth() // 0-based
+      const month = date.getMonth()
       if (month <= 2) return 'Q1'
       if (month <= 5) return 'Q2'
       if (month <= 8) return 'Q3'
@@ -101,8 +138,8 @@ export async function GET() {
     }))
 
     return NextResponse.json({
-      pipeline: { count: pipeline.length, value: sum(pipeline) },
-      won: { count: won.length, value: sum(won) },
+      pipeline: { count: pipeline.length, value: sum(pipeline), drilldown: groupDealsByOwner(pipeline) },
+      won: { count: won.length, value: sum(won), drilldown: groupDealsByOwner(won) },
       quarterlyTrend,
       lastUpdated: new Date().toISOString(),
     })
