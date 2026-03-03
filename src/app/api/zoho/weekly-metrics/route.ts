@@ -29,8 +29,14 @@ async function searchRecords(module: string, fields: string, criteria: string): 
   let hasMore = true
 
   while (hasMore && page <= 5) {
+    const params = new URLSearchParams({
+      fields,
+      criteria,
+      per_page: '200',
+      page: String(page),
+    })
     const result = await zohoFetch(
-      `/crm/v7/${module}/search?fields=${fields}&criteria=${criteria}&per_page=200&page=${page}`
+      `/crm/v7/${module}/search?${params.toString()}`
     )
     if (result.data) {
       all.push(...result.data)
