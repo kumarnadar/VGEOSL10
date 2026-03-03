@@ -18,15 +18,20 @@ interface GroupedDrilldown {
   items: DrilldownItem[]
 }
 
-/** Paginate a Zoho CRM list endpoint (max 5 pages = 1000 records). */
-async function fetchAllRecords(path: string): Promise<ZohoRecord[]> {
+/**
+ * Search a Zoho CRM module with criteria filtering (paginated).
+ * Uses /search endpoint which actually applies criteria filters.
+ * The list endpoint (GET /module) ignores criteria in v7.
+ */
+async function searchRecords(module: string, fields: string, criteria: string): Promise<ZohoRecord[]> {
   const all: ZohoRecord[] = []
   let page = 1
   let hasMore = true
 
   while (hasMore && page <= 5) {
-    const sep = path.includes('?') ? '&' : '?'
-    const result = await zohoFetch(`${path}${sep}per_page=200&page=${page}`)
+    const result = await zohoFetch(
+      `/crm/v7/${module}/search?fields=${fields}&criteria=${criteria}&per_page=200&page=${page}`
+    )
     if (result.data) {
       all.push(...result.data)
     }
@@ -96,41 +101,38 @@ export async function GET(request: NextRequest) {
   const window = getReportingWindow(meetingDay)
 
   try {
-    // Fetch all 5 metrics in parallel (metrics 4 & 5 share one call)
+    // Fetch all 5 metrics in parallel using /search endpoint (metrics 4 & 5 share one call)
     const [contacts, events, newDeals, proposalDeals] = await Promise.all([
-      // Metric 1: New Contacts
-      fetchAllRecords(
-        `/crm/v7/Contacts?fields=Full_Name,Account_Name,Description,Created_By,Created_Time` +
-        `&criteria=(Created_Time:between:${window.start},${window.end})`
+      // Metric 1: New Contacts created this week
+      searchRecords(
+        'Contacts',
+        'Full_Name,Account_Name,Description,Created_By,Created_Time',
+        `(Created_Time:between:${window.start},${window.end})`
       ).catch(() => [] as ZohoRecord[]),
 
-      // Metric 2: First Time Meetings (Events with First_Time_Meeting flag)
-      fetchAllRecords(
-        `/crm/v7/Events?fields=Event_Title,Who_Id,What_Id,Start_DateTime,Created_By,Created_Time,First_Time_Meeting` +
-        `&criteria=((First_Time_Meeting:equals:true)and(Start_DateTime:between:${window.start},${window.end}))`
+      // Metric 2: First Time Meetings this week
+      searchRecords(
+        'Events',
+        'Event_Title,Who_Id,What_Id,Start_DateTime,Created_By,Created_Time,First_Time_Meeting',
+        `((First_Time_Meeting:equals:true)and(Start_DateTime:between:${window.start},${window.end}))`
       ).catch(() => [] as ZohoRecord[]),
 
-      // Metric 3: New Potentials (Deals created this week)
-      fetchAllRecords(
-        `/crm/v7/Deals?fields=Deal_Name,Account_Name,Contact_Name,Amount,Stage,Created_By,Created_Time` +
-        `&criteria=(Created_Time:between:${window.start},${window.end})`
+      // Metric 3: New Potentials (Deals) created this week
+      searchRecords(
+        'Deals',
+        'Deal_Name,Account_Name,Contact_Name,Amount,Stage,Created_By,Created_Time',
+        `(Created_Time:between:${window.start},${window.end})`
       ).catch(() => [] as ZohoRecord[]),
 
       // Metrics 4 & 5: Proposals (deals at proposal stage, modified this week)
-      fetchAllRecords(
-        `/crm/v7/Deals?fields=Deal_Name,Account_Name,Amount,Stage,Owner,Closing_Date,Modified_Time` +
-        `&criteria=((Stage:equals:Prepare Proposal)or(Stage:equals:Presenting Proposal))`
+      searchRecords(
+        'Deals',
+        'Deal_Name,Account_Name,Amount,Stage,Owner,Closing_Date,Modified_Time',
+        `((Stage:equals:Prepare Proposal)or(Stage:equals:Presenting Proposal))and(Modified_Time:between:${window.start},${window.end})`
       ).catch(() => [] as ZohoRecord[]),
     ])
 
-    // Filter proposals to those modified within the reporting window
-    const proposalsInWindow = proposalDeals.filter((d) => {
-      const modTime = d.Modified_Time as string | null
-      if (!modTime) return false
-      return modTime >= window.start && modTime <= window.end
-    })
-
-    const proposalTotal = proposalsInWindow.reduce(
+    const proposalTotal = proposalDeals.reduce(
       (sum, d) => sum + (Number(d.Amount) || 0), 0
     )
 
@@ -158,7 +160,7 @@ export async function GET(request: NextRequest) {
       created: (r.Created_Time as string || '').slice(0, 10),
     }))
 
-    const proposalsDrilldown = groupByUser(proposalsInWindow, 'Owner', (r) => ({
+    const proposalsDrilldown = groupByUser(proposalDeals, 'Owner', (r) => ({
       name: r.Deal_Name as string,
       account: (r.Account_Name as { name?: string })?.name || r.Account_Name as string || '',
       amount: Number(r.Amount) || 0,
@@ -172,7 +174,7 @@ export async function GET(request: NextRequest) {
         contacts: { count: contacts.length, drilldown: contactsDrilldown },
         firstTimeMeetings: { count: events.length, drilldown: eventsDrilldown },
         newPotentials: { count: newDeals.length, drilldown: dealsDrilldown },
-        proposalsCount: { count: proposalsInWindow.length, drilldown: proposalsDrilldown },
+        proposalsCount: { count: proposalDeals.length, drilldown: proposalsDrilldown },
         proposalsValue: { total: proposalTotal },
       },
       lastUpdated: new Date().toISOString(),
