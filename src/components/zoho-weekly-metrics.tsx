@@ -38,6 +38,15 @@ const formatCurrency = (val: number) =>
       ? `$${(val / 1000).toFixed(0)}K`
       : `$${val.toLocaleString()}`
 
+/** Format a date string (YYYY-MM-DD or ISO) as "Mar 7" style. */
+const formatDate = (v: unknown): string => {
+  const str = String(v || '')
+  if (!str) return ''
+  const d = new Date(str.length === 10 ? str + 'T00:00:00' : str)
+  if (isNaN(d.getTime())) return str
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch weekly metrics')
@@ -113,27 +122,27 @@ const DRILLDOWN_COLUMNS: Record<MetricKey, { key: string; label: string; format?
     { key: 'name', label: 'Name' },
     { key: 'company', label: 'Company' },
     { key: 'notes', label: 'Notes' },
-    { key: 'created', label: 'Created' },
+    { key: 'created', label: 'Created', format: formatDate },
   ],
   firstTimeMeetings: [
     { key: 'title', label: 'Event' },
     { key: 'contact', label: 'Contact' },
     { key: 'company', label: 'Company' },
-    { key: 'date', label: 'Date' },
+    { key: 'date', label: 'Date', format: formatDate },
   ],
   newPotentials: [
     { key: 'name', label: 'Deal' },
     { key: 'account', label: 'Account' },
     { key: 'amount', label: 'Amount', format: (v) => formatCurrency(Number(v) || 0) },
     { key: 'stage', label: 'Stage' },
-    { key: 'created', label: 'Created' },
+    { key: 'created', label: 'Created', format: formatDate },
   ],
   proposals: [
     { key: 'name', label: 'Deal' },
     { key: 'account', label: 'Account' },
     { key: 'amount', label: 'Amount', format: (v) => formatCurrency(Number(v) || 0) },
     { key: 'stage', label: 'Stage' },
-    { key: 'closingDate', label: 'Close Date' },
+    { key: 'closingDate', label: 'Close Date', format: formatDate },
   ],
 }
 
