@@ -30,6 +30,7 @@ function EditGroupDialog({
     description: group.description || '',
     geography: group.geography || 'US',
     cadence: group.meeting_cadence || 'weekly',
+    meetingDay: group.meeting_day ?? 4,
     showZohoCrm: group.show_zoho_crm || false,
   })
 
@@ -42,6 +43,7 @@ function EditGroupDialog({
         description: form.description,
         geography: form.geography,
         meeting_cadence: form.cadence,
+        meeting_day: form.meetingDay,
         show_zoho_crm: form.showZohoCrm,
       })
       .eq('id', group.id)
@@ -90,6 +92,21 @@ function EditGroupDialog({
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="biweekly">Bi-weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Meeting Day</Label>
+            <Select value={String(form.meetingDay)} onValueChange={(v) => setForm((p) => ({ ...p, meetingDay: Number(v) }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Sunday</SelectItem>
+                <SelectItem value="1">Monday</SelectItem>
+                <SelectItem value="2">Tuesday</SelectItem>
+                <SelectItem value="3">Wednesday</SelectItem>
+                <SelectItem value="4">Thursday</SelectItem>
+                <SelectItem value="5">Friday</SelectItem>
+                <SelectItem value="6">Saturday</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -212,7 +229,7 @@ export function GroupsTab() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold">{group.name}</h3>
-              <p className="text-sm text-muted-foreground">{group.description} | {group.geography} | {group.meeting_cadence}</p>
+              <p className="text-sm text-muted-foreground">{group.description} | {group.geography} | {group.meeting_cadence} | {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][group.meeting_day ?? 4]}</p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setEditingGroup(group)}>
               <Pencil className="h-4 w-4 mr-1" />

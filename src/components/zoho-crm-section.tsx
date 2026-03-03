@@ -14,6 +14,7 @@ import {
   Legend,
 } from 'recharts'
 import { DollarSign, TrendingUp, Briefcase, Trophy } from 'lucide-react'
+import { ZohoWeeklyMetrics } from '@/components/zoho-weekly-metrics'
 
 interface ZohoRevenue {
   pipeline: { count: number; value: number }
@@ -35,7 +36,7 @@ const fetcher = async (url: string) => {
   return res.json()
 }
 
-export function ZohoCrmSection() {
+export function ZohoCrmSection({ groupId }: { groupId?: string }) {
   const { data, error, isLoading } = useSWR<ZohoRevenue>(
     '/api/zoho/revenue',
     fetcher,
@@ -44,31 +45,37 @@ export function ZohoCrmSection() {
 
   if (error) {
     return (
-      <Card className="animate-fade-in">
-        <CardContent className="py-6">
-          <p className="text-sm text-muted-foreground text-center">
-            CRM data unavailable
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <ZohoWeeklyMetrics groupId={groupId} />
+        <Card className="animate-fade-in">
+          <CardContent className="py-6">
+            <p className="text-sm text-muted-foreground text-center">
+              CRM revenue data unavailable
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   if (isLoading || !data) {
     return (
-      <Card className="animate-fade-in">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            CRM Revenue
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center">
-            <div className="animate-pulse text-muted-foreground text-sm">Loading CRM data...</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <ZohoWeeklyMetrics groupId={groupId} />
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              CRM Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 flex items-center justify-center">
+              <div className="animate-pulse text-muted-foreground text-sm">Loading CRM data...</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -80,6 +87,8 @@ export function ZohoCrmSection() {
   ]
 
   return (
+    <div className="space-y-6">
+      <ZohoWeeklyMetrics groupId={groupId} />
     <Card className="card-hover animate-fade-in">
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -136,5 +145,6 @@ export function ZohoCrmSection() {
         </div>
       </CardContent>
     </Card>
+    </div>
   )
 }

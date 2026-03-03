@@ -141,13 +141,14 @@ export default function DashboardPage() {
     async () => {
       const { data } = await supabase
         .from('groups')
-        .select('id, show_zoho_crm')
+        .select('id, show_zoho_crm, meeting_day')
         .in('id', groupIds)
       return data || []
     }
   )
 
   const showZohoTab = (groupCrmFlags || []).some((g: any) => g.show_zoho_crm)
+  const zohoGroupId = (groupCrmFlags || []).find((g: any) => g.show_zoho_crm)?.id as string | undefined
 
   // Generic rock aggregation helper: groups rocks by a key and counts on/off track
   function aggregateRocks<T extends Record<string, unknown>>(
@@ -324,7 +325,7 @@ export default function DashboardPage() {
 
         {showZohoTab && (
           <TabsContent value="zoho" className="space-y-6 mt-4">
-            <ZohoCrmSection />
+            <ZohoCrmSection groupId={zohoGroupId} />
           </TabsContent>
         )}
       </Tabs>
