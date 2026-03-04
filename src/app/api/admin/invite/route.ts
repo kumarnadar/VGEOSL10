@@ -53,9 +53,18 @@ export async function POST(request: Request) {
   }
 
   // Create admin client with service role key
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    console.error('[invite] SUPABASE_SERVICE_ROLE_KEY is not set')
+    return NextResponse.json(
+      { success: false, error: 'Server configuration error: service role key is missing. Add SUPABASE_SERVICE_ROLE_KEY to environment variables.' },
+      { status: 500 }
+    )
+  }
+
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    serviceRoleKey
   )
 
   // Invite user
@@ -65,8 +74,9 @@ export async function POST(request: Request) {
     })
 
   if (inviteError) {
+    console.error('[invite] Supabase invite error:', inviteError.message, inviteError)
     return NextResponse.json(
-      { success: false, error: inviteError.message },
+      { success: false, error: `Invite failed: ${inviteError.message}` },
       { status: 500 }
     )
   }
