@@ -686,7 +686,11 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
       const daysForward = (targetDay - today + 7) % 7
       const currentWeekEnd = new Date(now)
       currentWeekEnd.setDate(now.getDate() + daysForward)
-      const weekEnding = currentWeekEnd.toISOString().slice(0, 10)
+      // Use local date parts to avoid UTC shift (toISOString can jump a day in evening US timezones)
+      const y = currentWeekEnd.getFullYear()
+      const m = String(currentWeekEnd.getMonth() + 1).padStart(2, '0')
+      const d = String(currentWeekEnd.getDate()).padStart(2, '0')
+      const weekEnding = `${y}-${m}-${d}`
 
       const res = await fetch('/api/zoho/sync-scorecard', {
         method: 'POST',
