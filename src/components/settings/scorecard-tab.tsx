@@ -49,12 +49,11 @@ interface MeasureForm {
   display_order: number
 }
 
-export function ScorecardTab({ groups }: { groups: { id: string; name: string }[] }) {
-  // Try to default to the group with a scorecard template (Business Dev / BDEV)
-  const defaultGroup = groups.find((g) => {
-    const n = g.name.toUpperCase()
-    return n.includes('BDEV') || n.includes('BUSINESS DEV') || n.includes('BUSINESS DEVELOPMENT')
-  })?.id || groups[0]?.id || ''
+export function ScorecardTab({ groups }: { groups: { id: string; name: string; hasTemplate: boolean; showZohoCrm: boolean }[] }) {
+  // Default to the first group that has a scorecard template (or Zoho CRM enabled)
+  const defaultGroup = groups.find((g) => g.hasTemplate)?.id
+    || groups.find((g) => g.showZohoCrm)?.id
+    || groups[0]?.id || ''
   const [selectedGroupId, setSelectedGroupId] = useState(defaultGroup)
 
   if (groups.length === 0) {

@@ -14,12 +14,17 @@ import { AuditTab } from '@/components/settings/audit-tab'
 export default function SettingsPage() {
   const supabase = createClient()
 
-  const { data: groups, isLoading: groupsLoading } = useSWR('all-groups', async () => {
+  const { data: groups, isLoading: groupsLoading } = useSWR('all-groups-with-templates', async () => {
     const { data } = await supabase
       .from('groups')
-      .select('id, name')
+      .select('id, name, show_zoho_crm, scorecard_templates(id)')
       .order('name')
-    return (data || []) as { id: string; name: string }[]
+    return (data || []).map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      hasTemplate: (g.scorecard_templates?.length || 0) > 0,
+      showZohoCrm: !!g.show_zoho_crm,
+    })) as { id: string; name: string; hasTemplate: boolean; showZohoCrm: boolean }[]
   })
 
   return (
