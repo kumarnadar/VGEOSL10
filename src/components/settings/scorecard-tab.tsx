@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import useSWR, { mutate } from 'swr'
 import { useScorecardSettings, useScorecardTemplate, useScorecardGoals } from '@/hooks/use-scorecard'
@@ -80,10 +80,11 @@ export function ScorecardTab({ groups }: { groups: { id: string; name: string; h
       {selectedGroupId && (
         <>
           <WeekEndingDaySection groupId={selectedGroupId} />
+          <ZohoSyncSection groupId={selectedGroupId} />
+          <SalesQuotasSection />
           <GoalsSection groupId={selectedGroupId} />
           <CampaignMetricsSection groupId={selectedGroupId} />
           <MeasuresSection groupId={selectedGroupId} />
-          <ZohoSyncSection groupId={selectedGroupId} />
         </>
       )}
     </div>
@@ -659,6 +660,163 @@ function MeasuresSection({ groupId }: { groupId: string }) {
           onSave={handleSaveMeasure}
           saving={saving}
         />
+      )}
+    </div>
+  )
+}
+
+function SalesQuotasSection() {
+  const supabase = createClient()
+
+  const now = new Date()
+  const currentQuarter = Math.ceil((now.getMonth() + 1) / 3)
+  const currentYear = now.getFullYear()
+
+  const [quotaQuarter, setQuotaQuarter] = useState(currentQuarter)
+  const [quotaYear, setQuotaYear] = useState(currentYear)
+  const [quotas, setQuotas] = useState<Record<string, string>>({})
+  const [quotaSaving, setQuotaSaving] = useState(false)
+
+  // Fetch active profiles with zoho_user_id
+  const { data: profiles } = useSWR('active-profiles-for-quotas', async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, zoho_user_id, is_active')
+      .eq('is_active', true)
+      .order('full_name')
+    return (data || []) as { id: string; full_name: string | null; zoho_user_id: string | null; is_active: boolean }[]
+  })
+
+  // Fetch existing quotas when quarter/year changes
+  const quotaKey = `user-quotas-Q${quotaQuarter}-${quotaYear}`
+  const { data: existingQuotas } = useSWR(quotaKey, async () => {
+    const { data } = await supabase
+      .from('user_quotas')
+      .select('user_id, amount')
+      .eq('quarter', quotaQuarter)
+      .eq('year', quotaYear)
+    return (data || []) as { user_id: string; amount: number }[]
+  })
+
+  // Populate quotas state when existing data loads for a given quarter/year
+  useEffect(() => {
+    if (!existingQuotas) return
+    const map: Record<string, string> = {}
+    for (const q of existingQuotas) {
+      map[q.user_id] = String(q.amount)
+    }
+    setQuotas(map)
+  }, [existingQuotas])
+
+  async function handleSaveQuotas() {
+    setQuotaSaving(true)
+    try {
+      const rows = Object.entries(quotas)
+        .filter(([, val]) => val.trim() !== '')
+        .map(([userId, val]) => ({
+          user_id: userId,
+          quarter: quotaQuarter,
+          year: quotaYear,
+          amount: parseFloat(val.replace(/,/g, '')),
+        }))
+        .filter((row) => !isNaN(row.amount))
+
+      if (rows.length === 0) {
+        toast.info('No quotas to save')
+        setQuotaSaving(false)
+        return
+      }
+
+      const { error } = await supabase
+        .from('user_quotas')
+        .upsert(rows, { onConflict: 'user_id,quarter,year' })
+
+      if (error) throw error
+
+      toast.success(`Saved ${rows.length} quota(s) for Q${quotaQuarter} ${quotaYear}`)
+      mutate(quotaKey)
+    } catch {
+      toast.error('Failed to save quotas')
+    }
+    setQuotaSaving(false)
+  }
+
+  const quarterOptions = [1, 2, 3, 4].map((q) => ({
+    value: `${q}-${currentYear}`,
+    label: `Q${q} ${currentYear}`,
+    quarter: q,
+    year: currentYear,
+  }))
+
+  return (
+    <div className="rounded-lg border p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Sales Quotas</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Set quarterly sales quotas per user for pipeline and won revenue tracking.
+          </p>
+        </div>
+        <Select
+          value={`${quotaQuarter}-${quotaYear}`}
+          onValueChange={(v) => {
+            const [q, y] = v.split('-')
+            setQuotaQuarter(parseInt(q))
+            setQuotaYear(parseInt(y))
+            setQuotas({})
+          }}
+        >
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {quarterOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {!profiles || profiles.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No active users found.</p>
+      ) : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[1fr_160px] gap-3 text-xs font-medium text-muted-foreground px-1">
+            <span>User</span>
+            <span>Quota ($)</span>
+          </div>
+
+          {profiles.map((profile) => (
+            <div
+              key={profile.id}
+              className="grid grid-cols-[1fr_160px] gap-3 items-center rounded-md border px-3 py-2"
+            >
+              <div className="flex flex-col">
+                <span className="text-sm">{profile.full_name || '(no name)'}</span>
+                {!profile.zoho_user_id && (
+                  <span className="text-xs text-amber-600">No Zoho ID</span>
+                )}
+              </div>
+              <Input
+                type="text"
+                className="h-8 text-sm"
+                placeholder="No quota"
+                value={quotas[profile.id] ?? ''}
+                onChange={(e) =>
+                  setQuotas((prev) => ({ ...prev, [profile.id]: e.target.value }))
+                }
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {profiles && profiles.length > 0 && (
+        <div className="flex justify-end pt-2">
+          <Button size="sm" onClick={handleSaveQuotas} disabled={quotaSaving}>
+            {quotaSaving ? 'Saving...' : 'Save Quotas'}
+          </Button>
+        </div>
       )}
     </div>
   )
