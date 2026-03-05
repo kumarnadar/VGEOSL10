@@ -18,6 +18,7 @@ import {
 } from 'recharts'
 import { DollarSign, TrendingUp, Briefcase, Trophy, ChevronDown, ChevronRight } from 'lucide-react'
 import { ZohoWeeklyMetrics } from '@/components/zoho-weekly-metrics'
+import { ZohoQuotaTracker } from '@/components/zoho-quota-tracker'
 
 interface DrilldownDeal {
   name: string
@@ -247,6 +248,8 @@ export function ZohoCrmSection({ groupId }: { groupId?: string }) {
           </div>
         </CardContent>
       </Card>
+
+      <ZohoQuotaTracker groupId={groupId} />
 
       {/* Drilldown Sheet */}
       <Sheet open={activeStat !== null} onOpenChange={(open) => { if (!open) setActiveStat(null) }}>
