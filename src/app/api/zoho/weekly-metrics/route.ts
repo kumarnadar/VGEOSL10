@@ -2,7 +2,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { getReportingWindow, searchRecords, ZohoRecord } from '@/lib/zoho'
+import { getReportingWindowForDate, searchRecords, ZohoRecord } from '@/lib/zoho'
 
 interface DrilldownItem {
   [key: string]: unknown
@@ -69,7 +69,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const window = getReportingWindow(meetingDay)
+  // Always show the PREVIOUS completed reporting week (the one reviewed at this week's meeting).
+  // Subtracting 7 days from "now" lands in the prior window, so the dashboard shows
+  // the last completed week's data — not the in-progress week.
+  const now = new Date()
+  const prevRef = new Date(now)
+  prevRef.setDate(now.getDate() - 7)
+  const window = getReportingWindowForDate(meetingDay, prevRef)
 
   try {
     // Fetch all 5 metrics in parallel using /search endpoint (metrics 4 & 5 share one call)
