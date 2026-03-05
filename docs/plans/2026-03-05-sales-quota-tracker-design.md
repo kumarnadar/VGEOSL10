@@ -49,10 +49,10 @@ Add a 3rd section to the Zoho dashboard tab: a horizontal bar chart showing each
 ## Data Sources
 
 ### Quota
-- **Source:** Zoho CRM Settings/Targets API
-- **Endpoint:** `/crm/v7/settings/targets` (or `/crm/v7/settings/fiscal_year` + user targets)
-- **Scope:** Already authorized (`ZohoCRM.Settings.ALL`)
-- **Mapping:** Zoho user ID -> profiles.zoho_user_id
+- **Source:** EOS app database (`user_quotas` table)
+- **Reason:** Zoho Targets API requires `ZohoCRM.modules.Forecasts.READ` scope (not currently authorized). Quotas stored locally with plan to pull from Zoho in a future iteration.
+- **Table:** `user_quotas (user_id, quarter, year, amount)` -- admins manage via Settings UI
+- **Fallback:** If no quota exists for a user, show pipeline + won bars without a quota target
 
 ### Pipeline + Won Deals
 - **Source:** Zoho CRM Deals module (same as existing revenue API)
