@@ -9,6 +9,7 @@ import { QuartersTab } from '@/components/settings/quarters-tab'
 import { GroupsTab } from '@/components/settings/groups-tab'
 import { ScorecardTab } from '@/components/settings/scorecard-tab'
 import { MeetingsTab } from '@/components/settings/meetings-tab'
+import { AuditTab } from '@/components/settings/audit-tab'
 
 export default function SettingsPage() {
   const supabase = createClient()
@@ -42,6 +43,7 @@ export default function SettingsPage() {
             <TabsTrigger value="groups">Groups</TabsTrigger>
             <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
             <TabsTrigger value="meetings">Meetings</TabsTrigger>
+            <TabsTrigger value="audit">Audit Log</TabsTrigger>
           </TabsList>
 
           <TabsContent value="system" className="space-y-8 mt-6">
@@ -61,6 +63,10 @@ export default function SettingsPage() {
 
           <TabsContent value="meetings" className="mt-6">
             <MeetingsTab groups={groups || []} />
+          </TabsContent>
+
+          <TabsContent value="audit" className="mt-6">
+            <AuditTab />
           </TabsContent>
         </Tabs>
       )}

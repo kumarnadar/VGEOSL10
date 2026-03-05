@@ -44,6 +44,17 @@ export function ScorecardGrid({
     return map
   }, [entries])
 
+  // Track which measure+week cells have Zoho-sourced entries
+  const zohoSourceMap = useMemo(() => {
+    const map = new Set<string>()
+    entries?.forEach((e: any) => {
+      if (e.source === 'zoho') {
+        map.add(`${e.measure_id}-${e.week_ending}`)
+      }
+    })
+    return map
+  }, [entries])
+
   // Build aggregate map (for grid cell display - sum per measure+week)
   // Also compute calculated measure values from their formulas
   const aggregateMap = useMemo(() => {
@@ -192,6 +203,7 @@ export function ScorecardGrid({
               rollupEntryMap={rollupEntryMap}
               aggregateMap={aggregateMap}
               userEntryMap={userEntryMap}
+              zohoSourceMap={zohoSourceMap}
               goalMap={goalMap}
               goalIdMap={goalIdMap}
               members={members || []}
@@ -215,6 +227,7 @@ interface ScorecardSectionProps {
   rollupEntryMap: Map<string, any>
   aggregateMap: Map<string, number>
   userEntryMap: Map<string, any>
+  zohoSourceMap: Set<string>
   goalMap: Map<string, number>
   goalIdMap: Map<string, string>
   members: any[]
@@ -232,6 +245,7 @@ function ScorecardSection({
   rollupEntryMap,
   aggregateMap,
   userEntryMap,
+  zohoSourceMap,
   goalMap,
   goalIdMap,
   members,
@@ -316,6 +330,8 @@ function ScorecardSection({
                   )
                 }
 
+                const isZohoCell = zohoSourceMap.has(`${measure.id}-${week}`)
+
                 return (
                   <td key={week} className="text-right px-3 py-1.5 relative">
                     <CellEntryPopover
@@ -332,12 +348,18 @@ function ScorecardSection({
                     >
                       <button
                         aria-label={`Enter value for ${measure.name}`}
+                        title={isZohoCell ? 'Synced from Zoho CRM. Manual edits will be overwritten on next sync.' : undefined}
                         className={cn(
                           'w-full text-right cursor-pointer hover:bg-primary/5 rounded px-1 py-0.5',
                           aggValue === 0 && 'text-muted-foreground'
                         )}
                       >
-                        {formatValue(aggValue, measure.data_type)}
+                        <span className="inline-flex items-center gap-1">
+                          {isZohoCell && (
+                            <span className="inline-flex items-center justify-center h-4 w-4 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 shrink-0">Z</span>
+                          )}
+                          {formatValue(aggValue, measure.data_type)}
+                        </span>
                       </button>
                     </CellEntryPopover>
                   </td>

@@ -3,12 +3,19 @@
 import { createClient } from '@/lib/supabase/client'
 import useSWR from 'swr'
 
+let loginRecorded = false
+
 export function useUser() {
   const supabase = createClient()
 
   const { data: user, error, isLoading } = useSWR('user', async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
+
+    if (!loginRecorded) {
+      loginRecorded = true
+      fetch('/api/audit/login', { method: 'POST' }).catch(() => {})
+    }
 
     const { data: profile } = await supabase
       .from('profiles')

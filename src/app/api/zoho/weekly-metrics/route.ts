@@ -2,12 +2,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { zohoFetch, getReportingWindow } from '@/lib/zoho'
-
-interface ZohoRecord {
-  id: string
-  [key: string]: unknown
-}
+import { getReportingWindow, searchRecords, ZohoRecord } from '@/lib/zoho'
 
 interface DrilldownItem {
   [key: string]: unknown
@@ -16,36 +11,6 @@ interface DrilldownItem {
 interface GroupedDrilldown {
   userName: string
   items: DrilldownItem[]
-}
-
-/**
- * Search a Zoho CRM module with criteria filtering (paginated).
- * Uses /search endpoint which actually applies criteria filters.
- * The list endpoint (GET /module) ignores criteria in v7.
- */
-async function searchRecords(module: string, fields: string, criteria: string): Promise<ZohoRecord[]> {
-  const all: ZohoRecord[] = []
-  let page = 1
-  let hasMore = true
-
-  while (hasMore && page <= 5) {
-    const params = new URLSearchParams({
-      fields,
-      criteria,
-      per_page: '200',
-      page: String(page),
-    })
-    const result = await zohoFetch(
-      `/crm/v7/${module}/search?${params.toString()}`
-    )
-    if (result.data) {
-      all.push(...result.data)
-    }
-    hasMore = result.info?.more_records === true
-    page++
-  }
-
-  return all
 }
 
 /** Group records by a Zoho user field (Created_By or Owner). */

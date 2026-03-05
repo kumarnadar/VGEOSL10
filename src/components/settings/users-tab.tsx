@@ -28,6 +28,8 @@ interface UserProfile {
   geography: string | null
   role: string
   is_active: boolean
+  zoho_user_id: string | null
+  team_region: string | null
   group_members: GroupMembership[]
 }
 
@@ -143,6 +145,13 @@ function InviteDialog({ groups }: { groups: GroupOption[] }) {
   )
 }
 
+interface ZohoUser {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
 function EditUserDialog({
   user,
   groups,
@@ -162,7 +171,20 @@ function EditUserDialog({
     geography: user.geography || '',
     role: user.role,
     isActive: user.is_active,
+    zohoUserId: user.zoho_user_id || '',
+    teamRegion: user.team_region || 'US',
   })
+
+  // Fetch Zoho CRM users for the dropdown
+  const { data: zohoUsers } = useSWR<ZohoUser[]>(
+    open ? 'zoho-users' : null,
+    async () => {
+      const res = await fetch('/api/zoho/users')
+      if (!res.ok) return []
+      const data = await res.json()
+      return data.users || []
+    }
+  )
 
   function updateField(field: string, value: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -178,6 +200,8 @@ function EditUserDialog({
         geography: form.geography || null,
         role: form.role,
         is_active: form.isActive,
+        zoho_user_id: form.zohoUserId || null,
+        team_region: form.teamRegion || 'US',
       })
       .eq('id', user.id)
     setLoading(false)
@@ -249,6 +273,33 @@ function EditUserDialog({
               </Select>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Zoho CRM User</Label>
+              <Select value={form.zohoUserId} onValueChange={(val) => updateField('zohoUserId', val === '_none' ? '' : val)}>
+                <SelectTrigger><SelectValue placeholder="Not linked" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Not linked</SelectItem>
+                  {(zohoUsers || []).map((zu) => (
+                    <SelectItem key={zu.id} value={zu.id}>
+                      {zu.name} ({zu.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Team Region</Label>
+              <Select value={form.teamRegion} onValueChange={(val) => updateField('teamRegion', val)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">US</SelectItem>
+                  <SelectItem value="India">India</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <Label>Active</Label>
             <Switch checked={form.isActive} onCheckedChange={(val) => updateField('isActive', val)} />
@@ -331,6 +382,7 @@ export function UsersTab() {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Geography</TableHead>
+              <TableHead>Zoho ID</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Groups</TableHead>
               <TableHead>Status</TableHead>
@@ -344,6 +396,7 @@ export function UsersTab() {
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.phone || '-'}</TableCell>
                 <TableCell>{user.geography || '-'}</TableCell>
+                <TableCell>{user.zoho_user_id || '-'}</TableCell>
                 <TableCell>{roleLabels[user.role] || user.role}</TableCell>
                 <TableCell>
                   {user.group_members

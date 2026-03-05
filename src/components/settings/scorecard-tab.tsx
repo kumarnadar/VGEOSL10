@@ -76,6 +76,7 @@ export function ScorecardTab({ groups }: { groups: { id: string; name: string }[
           <WeekEndingDaySection groupId={selectedGroupId} />
           <CampaignMetricsSection groupId={selectedGroupId} />
           <MeasuresSection groupId={selectedGroupId} />
+          <ZohoSyncSection groupId={selectedGroupId} />
         </>
       )}
     </div>
@@ -429,6 +430,70 @@ function MeasuresSection({ groupId }: { groupId: string }) {
           onSave={handleSaveMeasure}
           saving={saving}
         />
+      )}
+    </div>
+  )
+}
+
+function ZohoSyncSection({ groupId }: { groupId: string }) {
+  const [syncing, setSyncing] = useState(false)
+  const [result, setResult] = useState<any>(null)
+
+  async function handleSync(weeks: number = 1) {
+    setSyncing(true)
+    setResult(null)
+    try {
+      // Calculate last week ending (most recent Friday)
+      const now = new Date()
+      const today = now.getDay()
+      let daysBack = (today - 5 + 7) % 7 // 5 = Friday
+      if (daysBack === 0) daysBack = 7
+      const lastFriday = new Date(now)
+      lastFriday.setDate(now.getDate() - daysBack)
+      const weekEnding = lastFriday.toISOString().slice(0, 10)
+
+      const res = await fetch('/api/zoho/sync-scorecard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, weekEnding, weeks }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setResult(data)
+        toast.success(`Synced ${data.entriesUpserted} entries for ${data.weeksProcessed} week(s)`)
+      } else {
+        toast.error(data.error || 'Sync failed')
+      }
+    } catch {
+      toast.error('Network error during sync')
+    }
+    setSyncing(false)
+  }
+
+  return (
+    <div className="rounded-lg border p-6 space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold">Zoho CRM Sync</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Populate scorecard entries from Zoho CRM data. Runs automatically every Saturday, or sync manually below.
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <Button onClick={() => handleSync(1)} disabled={syncing}>
+          {syncing ? 'Syncing...' : 'Sync Last Week'}
+        </Button>
+        <Button variant="outline" onClick={() => handleSync(5)} disabled={syncing}>
+          {syncing ? 'Syncing...' : 'Backfill (5 Weeks)'}
+        </Button>
+      </div>
+      {result && (
+        <div className="rounded border bg-muted/50 p-3 text-sm space-y-1">
+          <p>Weeks processed: {result.weeksProcessed}</p>
+          <p>Entries upserted: {result.entriesUpserted}</p>
+          {result.unmappedZohoUsers?.length > 0 && (
+            <p className="text-amber-600">Unmapped Zoho users: {result.unmappedZohoUsers.join(', ')}</p>
+          )}
+        </div>
       )}
     </div>
   )

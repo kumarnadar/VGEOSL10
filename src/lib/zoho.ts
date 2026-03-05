@@ -3,6 +3,12 @@
 const ZOHO_TOKEN_URL = 'https://accounts.zoho.com/oauth/v2/token'
 const ZOHO_API_BASE = 'https://www.zohoapis.com'
 
+/** Generic Zoho CRM record shape (fields vary per module). */
+export interface ZohoRecord {
+  id: string
+  [key: string]: unknown
+}
+
 // In-memory token cache (resets on cold start, which is fine)
 let cachedAccessToken: string | null = null
 let tokenExpiresAt = 0
@@ -38,37 +44,29 @@ export async function getAccessToken(): Promise<string> {
 }
 
 /**
- * Compute the reporting window (past 7 days from the most recent meeting day).
- * The window starts on the most recent meeting day and ends 6 days later.
- * Example: meeting_day=4 (Thursday), today is March 2 (Sunday):
- *   - Most recent Thursday = Feb 27
- *   - Window: Feb 27 00:00:00 to Mar 5 23:59:59 (Thu–Wed)
- * On meeting day itself, shows the current week (today through next 6 days).
- * Returns ISO date strings for Zoho criteria (YYYY-MM-DDTHH:mm:ssZ).
+ * Compute the reporting window anchored to an arbitrary reference date.
+ * The window starts on the most recent occurrence of meetingDay at or before
+ * refDate and spans 7 days (start through start+6).
+ * Returns ISO date strings suitable for Zoho criteria (YYYY-MM-DDTHH:mm:ssZ).
  */
-export function getReportingWindow(meetingDay: number): {
-  start: string
-  end: string
-  label: string
-} {
-  const now = new Date()
-  const today = now.getDay() // 0=Sun..6=Sat
+export function getReportingWindowForDate(
+  meetingDay: number,
+  refDate: Date,
+): { start: string; end: string; label: string } {
+  const today = refDate.getDay() // 0=Sun..6=Sat
 
-  // Days since last meeting day (0 = today is meeting day)
-  let daysSinceMeeting = (today - meetingDay + 7) % 7
+  // Days since last meeting day (0 = refDate is the meeting day)
+  const daysSinceMeeting = (today - meetingDay + 7) % 7
 
-  // Window starts on the most recent meeting day
-  const windowStart = new Date(now)
-  windowStart.setDate(now.getDate() - daysSinceMeeting)
+  const windowStart = new Date(refDate)
+  windowStart.setDate(refDate.getDate() - daysSinceMeeting)
   windowStart.setHours(0, 0, 0, 0)
 
-  // Window ends 6 days after start (full 7-day span)
   const windowEnd = new Date(windowStart)
   windowEnd.setDate(windowStart.getDate() + 6)
   windowEnd.setHours(23, 59, 59, 999)
 
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
-
   const labelStart = windowStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const labelEnd = windowEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
@@ -77,6 +75,44 @@ export function getReportingWindow(meetingDay: number): {
     end: `${fmt(windowEnd)}T23:59:59+00:00`,
     label: `${labelStart} – ${labelEnd}`,
   }
+}
+
+/**
+ * Compute the reporting window for "now" (convenience wrapper).
+ * Equivalent to getReportingWindowForDate(meetingDay, new Date()).
+ */
+export function getReportingWindow(meetingDay: number): {
+  start: string
+  end: string
+  label: string
+} {
+  return getReportingWindowForDate(meetingDay, new Date())
+}
+
+/** Search a Zoho CRM module with criteria filtering (paginated, up to 1 000 records). */
+export async function searchRecords(
+  module: string,
+  fields: string,
+  criteria: string,
+): Promise<ZohoRecord[]> {
+  const all: ZohoRecord[] = []
+  let page = 1
+  let hasMore = true
+
+  while (hasMore && page <= 5) {
+    const params = new URLSearchParams({
+      fields,
+      criteria,
+      per_page: '200',
+      page: String(page),
+    })
+    const result = await zohoFetch(`/crm/v7/${module}/search?${params.toString()}`)
+    if (result.data) all.push(...result.data)
+    hasMore = result.info?.more_records === true
+    page++
+  }
+
+  return all
 }
 
 /** Fetch from the Zoho CRM API with automatic token management. */

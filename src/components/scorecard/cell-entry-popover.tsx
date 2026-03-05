@@ -92,7 +92,7 @@ export function CellEntryPopover({
       if (parsed !== Number(existing.value)) {
         await supabase
           .from('scorecard_entries')
-          .update({ value: parsed, updated_at: new Date().toISOString() })
+          .update({ value: parsed, source: 'manual', updated_at: new Date().toISOString() })
           .eq('id', existing.id)
       }
     } else {
