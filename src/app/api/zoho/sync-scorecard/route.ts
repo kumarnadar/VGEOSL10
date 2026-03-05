@@ -36,13 +36,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  const { data: profile, error: profileErr } = await supabase
+  const { data: profiles, error: profileErr } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
 
-  if (profileErr || profile?.role !== 'system_admin') {
+  if (profileErr || !profiles?.length || profiles[0].role !== 'system_admin') {
     return NextResponse.json({ error: 'Forbidden: system_admin role required' }, { status: 403 })
   }
 

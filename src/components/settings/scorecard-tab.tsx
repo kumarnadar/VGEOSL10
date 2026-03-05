@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import useSWR, { mutate } from 'swr'
-import { useScorecardSettings, useScorecardTemplate } from '@/hooks/use-scorecard'
+import { useScorecardSettings, useScorecardTemplate, useScorecardGoals } from '@/hooks/use-scorecard'
+import { useUser } from '@/hooks/use-user'
 import { useCampaignMetrics } from '@/hooks/use-campaigns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -74,6 +75,7 @@ export function ScorecardTab({ groups }: { groups: { id: string; name: string }[
       {selectedGroupId && (
         <>
           <WeekEndingDaySection groupId={selectedGroupId} />
+          <GoalsSection groupId={selectedGroupId} />
           <CampaignMetricsSection groupId={selectedGroupId} />
           <MeasuresSection groupId={selectedGroupId} />
           <ZohoSyncSection groupId={selectedGroupId} />
@@ -125,6 +127,176 @@ function WeekEndingDaySection({ groupId }: { groupId: string }) {
           </SelectContent>
         </Select>
       </div>
+    </div>
+  )
+}
+
+function getCurrentQuarter(): string {
+  const now = new Date()
+  const q = Math.ceil((now.getMonth() + 1) / 3)
+  return `${now.getFullYear()}-Q${q}`
+}
+
+function getNextQuarter(current: string): string {
+  const [year, qPart] = current.split('-Q')
+  const q = parseInt(qPart)
+  if (q === 4) return `${parseInt(year) + 1}-Q1`
+  return `${year}-Q${q + 1}`
+}
+
+function GoalsSection({ groupId }: { groupId: string }) {
+  const supabase = createClient()
+  const { user } = useUser()
+  const currentQuarter = getCurrentQuarter()
+  const [quarter, setQuarter] = useState(currentQuarter)
+  const [editedGoals, setEditedGoals] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+
+  const { data: template } = useScorecardTemplate(groupId)
+  const { data: goals } = useScorecardGoals(groupId, quarter)
+
+  const sections = template?.scorecard_sections || []
+  const nextQuarter = getNextQuarter(currentQuarter)
+
+  // Build a lookup map: measure_id -> goal record
+  const goalByMeasure = (goals || []).reduce((acc: Record<string, any>, g: any) => {
+    acc[g.measure_id] = g
+    return acc
+  }, {})
+
+  function getDisplayValue(measureId: string): string {
+    if (measureId in editedGoals) return editedGoals[measureId]
+    const existing = goalByMeasure[measureId]
+    if (existing != null) return String(Math.round(existing.goal_value))
+    return ''
+  }
+
+  function handleGoalChange(measureId: string, value: string) {
+    setEditedGoals((prev) => ({ ...prev, [measureId]: value }))
+  }
+
+  async function handleSaveGoals() {
+    if (!user) return
+    setSaving(true)
+    try {
+      const changedEntries = Object.entries(editedGoals).filter(
+        ([measureId, rawValue]) => {
+          if (rawValue === '') return false
+          const parsed = parseInt(rawValue)
+          if (isNaN(parsed)) return false
+          const existing = goalByMeasure[measureId]
+          if (existing == null) return true
+          return Math.round(existing.goal_value) !== parsed
+        }
+      )
+
+      for (const [measureId, rawValue] of changedEntries) {
+        const goalValue = Math.round(parseInt(rawValue))
+        const existing = goalByMeasure[measureId]
+
+        if (existing) {
+          const { error } = await supabase
+            .from('scorecard_goals')
+            .update({ goal_value: goalValue })
+            .eq('id', existing.id)
+          if (error) throw error
+        } else {
+          const { error } = await supabase
+            .from('scorecard_goals')
+            .insert({ measure_id: measureId, quarter, goal_value: goalValue, set_by: user.id })
+          if (error) throw error
+        }
+      }
+
+      if (changedEntries.length === 0) {
+        toast.info('No changes to save')
+      } else {
+        toast.success(`Saved ${changedEntries.length} goal(s)`)
+        setEditedGoals({})
+        mutate(`scorecard-goals-${groupId}-${quarter}`)
+      }
+    } catch {
+      toast.error('Failed to save goals')
+    }
+    setSaving(false)
+  }
+
+  const hasChanges = Object.keys(editedGoals).some((measureId) => {
+    const raw = editedGoals[measureId]
+    if (raw === '') return false
+    const parsed = parseInt(raw)
+    if (isNaN(parsed)) return false
+    const existing = goalByMeasure[measureId]
+    if (existing == null) return true
+    return Math.round(existing.goal_value) !== parsed
+  })
+
+  return (
+    <div className="rounded-lg border p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Quarterly Goals</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Set whole-number targets for each scorecard measure per quarter.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={quarter} onValueChange={(v) => { setQuarter(v); setEditedGoals({}) }}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={currentQuarter}>{currentQuarter}</SelectItem>
+              <SelectItem value={nextQuarter}>{nextQuarter}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {sections.length === 0 && (
+        <p className="text-sm text-muted-foreground">No scorecard template found for this group.</p>
+      )}
+
+      {sections.length > 0 && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[1fr_2fr_100px_120px] gap-2 text-xs font-medium text-muted-foreground px-1">
+            <span>Section</span>
+            <span>Measure</span>
+            <span>Data Type</span>
+            <span>Goal</span>
+          </div>
+
+          {sections.flatMap((section: any) =>
+            (section.scorecard_measures || []).map((m: any) => (
+              <div
+                key={m.id}
+                className="grid grid-cols-[1fr_2fr_100px_120px] gap-2 items-center rounded-md border px-3 py-2"
+              >
+                <span className="text-sm text-muted-foreground">{section.name}</span>
+                <span className="text-sm">{m.name}</span>
+                <span className="text-xs text-muted-foreground capitalize">{m.unit}</span>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="h-8 text-sm w-24"
+                  placeholder="—"
+                  value={getDisplayValue(m.id)}
+                  onChange={(e) => handleGoalChange(m.id, e.target.value)}
+                />
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {sections.length > 0 && (
+        <div className="flex justify-end pt-2">
+          <Button size="sm" onClick={handleSaveGoals} disabled={saving || !hasChanges}>
+            {saving ? 'Saving...' : 'Save All Goals'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -438,10 +610,12 @@ function MeasuresSection({ groupId }: { groupId: string }) {
 function ZohoSyncSection({ groupId }: { groupId: string }) {
   const [syncing, setSyncing] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   async function handleSync(weeks: number = 1) {
     setSyncing(true)
     setResult(null)
+    setSyncError(null)
     try {
       // Calculate last week ending (most recent Friday)
       const now = new Date()
@@ -462,10 +636,13 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
         setResult(data)
         toast.success(`Synced ${data.entriesUpserted} entries for ${data.weeksProcessed} week(s)`)
       } else {
+        setSyncError(data.error || 'Sync failed')
         toast.error(data.error || 'Sync failed')
       }
-    } catch {
-      toast.error('Network error during sync')
+    } catch (err: any) {
+      const msg = err?.message || 'Network error during sync'
+      setSyncError(msg)
+      toast.error(msg)
     }
     setSyncing(false)
   }
@@ -486,6 +663,12 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
           {syncing ? 'Syncing...' : 'Backfill (5 Weeks)'}
         </Button>
       </div>
+      {syncError && (
+        <div className="rounded border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          <p className="font-medium">Sync Error</p>
+          <p className="mt-1">{syncError}</p>
+        </div>
+      )}
       {result && (
         <div className="rounded border bg-muted/50 p-3 text-sm space-y-1">
           <p>Weeks processed: {result.weeksProcessed}</p>

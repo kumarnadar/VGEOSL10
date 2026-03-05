@@ -90,16 +90,20 @@ export async function syncZohoToScorecard(
   // ------------------------------------------------------------------
   // 1. Load group settings (meeting_day)
   // ------------------------------------------------------------------
-  const { data: group, error: groupErr } = await supabase
+  const { data: groups, error: groupErr } = await supabase
     .from('groups')
     .select('id, meeting_day')
     .eq('id', groupId)
-    .single()
 
-  if (groupErr || !group) {
-    throw new Error(`Group ${groupId} not found: ${groupErr?.message}`)
+  if (groupErr) {
+    throw new Error(`Failed to load group ${groupId}: ${groupErr.message}`)
   }
 
+  if (!groups || groups.length === 0) {
+    throw new Error(`Group ${groupId} not found`)
+  }
+
+  const group = groups[0]
   const meetingDay: number = group.meeting_day ?? 4 // default Thursday
 
   // ------------------------------------------------------------------
@@ -138,6 +142,7 @@ export async function syncZohoToScorecard(
     .select('id, name, zoho_field_mapping, section_id')
     .in('section_id', sectionIds)
     .not('zoho_field_mapping', 'is', null)
+    .neq('zoho_field_mapping', '')
 
   if (measErr) {
     throw new Error(`Failed to load measures: ${measErr.message}`)
