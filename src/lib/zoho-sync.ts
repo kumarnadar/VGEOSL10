@@ -105,16 +105,22 @@ export async function syncZohoToScorecard(
   // ------------------------------------------------------------------
   // 2. Load scorecard template + sections + measures with Zoho mappings
   // ------------------------------------------------------------------
-  const { data: template, error: tmplErr } = await supabase
+  const { data: templates, error: tmplErr } = await supabase
     .from('scorecard_templates')
     .select('id')
     .eq('group_id', groupId)
     .eq('is_active', true)
-    .single()
 
-  if (tmplErr || !template) {
-    throw new Error(`No active scorecard template for group ${groupId}: ${tmplErr?.message}`)
+  if (tmplErr) {
+    throw new Error(`Failed to load scorecard templates for group ${groupId}: ${tmplErr.message}`)
   }
+
+  if (!templates || templates.length === 0) {
+    // No scorecard template for this group -- skip silently
+    return { weeksProcessed: weeks, entriesUpserted: 0, unmappedZohoUsers: [] }
+  }
+
+  const template = templates[0]
 
   const { data: sections, error: secErr } = await supabase
     .from('scorecard_sections')
