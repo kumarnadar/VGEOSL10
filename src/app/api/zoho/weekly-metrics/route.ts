@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
   const window = getReportingWindowForDate(meetingDay, prevRef)
 
   try {
-    // Fetch all 5 metrics in parallel using /search endpoint (metrics 4 & 5 share one call)
-    const [contacts, events, newDeals, proposalDeals] = await Promise.all([
+    // Fetch all 7 metrics in parallel using /search endpoint (metrics 4 & 5 share one call)
+    const [contacts, events, newDeals, proposalDeals, wonDeals, lostDeals] = await Promise.all([
       // Metric 1: New Contacts created this week
       searchRecords(
         'Contacts',
@@ -106,6 +106,20 @@ export async function GET(request: NextRequest) {
         'Deals',
         'Deal_Name,Account_Name,Amount,Stage,Owner,Closing_Date,Modified_Time',
         `((Stage:equals:Prepare Proposal)or(Stage:equals:Presenting Proposal))and(Modified_Time:between:${window.start},${window.end})`
+      ).catch(() => [] as ZohoRecord[]),
+
+      // Metric 6: Deals Won this week (stage changed to Closed Won)
+      searchRecords(
+        'Deals',
+        'Deal_Name,Account_Name,Amount,Owner,Closing_Date,Modified_Time',
+        `((Stage:equals:Closed Won)and(Modified_Time:between:${window.start},${window.end}))`
+      ).catch(() => [] as ZohoRecord[]),
+
+      // Metric 7: Deals Lost this week (stage changed to Closed Lost)
+      searchRecords(
+        'Deals',
+        'Deal_Name,Account_Name,Amount,Owner,Closing_Date,Modified_Time',
+        `((Stage:equals:Closed Lost)and(Modified_Time:between:${window.start},${window.end}))`
       ).catch(() => [] as ZohoRecord[]),
     ])
 
@@ -145,6 +159,23 @@ export async function GET(request: NextRequest) {
       closingDate: (r.Closing_Date as string) || '',
     }))
 
+    const wonTotal = wonDeals.reduce((sum, d) => sum + (Number(d.Amount) || 0), 0)
+    const lostTotal = lostDeals.reduce((sum, d) => sum + (Number(d.Amount) || 0), 0)
+
+    const wonDrilldown = groupByUser(wonDeals, 'Owner', (r) => ({
+      name: r.Deal_Name as string,
+      account: (r.Account_Name as { name?: string })?.name || r.Account_Name as string || '',
+      amount: Number(r.Amount) || 0,
+      closingDate: (r.Closing_Date as string) || '',
+    }))
+
+    const lostDrilldown = groupByUser(lostDeals, 'Owner', (r) => ({
+      name: r.Deal_Name as string,
+      account: (r.Account_Name as { name?: string })?.name || r.Account_Name as string || '',
+      amount: Number(r.Amount) || 0,
+      closingDate: (r.Closing_Date as string) || '',
+    }))
+
     return NextResponse.json({
       window: { start: window.start.slice(0, 10), end: window.end.slice(0, 10), label: window.label },
       metrics: {
@@ -153,6 +184,8 @@ export async function GET(request: NextRequest) {
         newPotentials: { count: newDeals.length, drilldown: dealsDrilldown },
         proposalsCount: { count: proposalDeals.length, drilldown: proposalsDrilldown },
         proposalsValue: { total: proposalTotal },
+        dealsWon: { count: wonDeals.length, total: wonTotal, drilldown: wonDrilldown },
+        dealsLost: { count: lostDeals.length, total: lostTotal, drilldown: lostDrilldown },
       },
       lastUpdated: new Date().toISOString(),
     })
