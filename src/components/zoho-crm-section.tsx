@@ -192,7 +192,7 @@ export function ZohoCrmSection({ groupId }: { groupId?: string }) {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              CRM Revenue — {new Date().getFullYear()}
+              CRM Revenue — Year to Date
             </CardTitle>
             <span className="text-xs text-muted-foreground">
               Updated {new Date(data.lastUpdated).toLocaleTimeString()}
