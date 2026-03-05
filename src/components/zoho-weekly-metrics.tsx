@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Users, CalendarCheck, Briefcase, FileText, DollarSign, ChevronDown, ChevronRight } from 'lucide-react'
+import { Users, CalendarCheck, Briefcase, FileText, Trophy, XCircle, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface GroupedDrilldown {
   userName: string
@@ -19,6 +19,12 @@ interface MetricData {
   drilldown: GroupedDrilldown[]
 }
 
+interface DealClosureData {
+  count: number
+  total: number
+  drilldown: GroupedDrilldown[]
+}
+
 interface WeeklyMetricsResponse {
   window: { start: string; end: string; label: string }
   metrics: {
@@ -27,6 +33,8 @@ interface WeeklyMetricsResponse {
     newPotentials: MetricData
     proposalsCount: MetricData
     proposalsValue: { total: number }
+    dealsWon: DealClosureData
+    dealsLost: DealClosureData
   }
   lastUpdated: string
 }
@@ -53,9 +61,9 @@ const fetcher = async (url: string) => {
   return res.json()
 }
 
-type MetricKey = 'contacts' | 'firstTimeMeetings' | 'newPotentials' | 'proposals'
+type MetricKey = 'contacts' | 'firstTimeMeetings' | 'newPotentials' | 'proposals' | 'dealsWon' | 'dealsLost'
 
-const METRIC_CONFIG: {
+const ACTIVITY_CARDS: {
   key: MetricKey
   label: string
   icon: typeof Users
@@ -65,7 +73,18 @@ const METRIC_CONFIG: {
   { key: 'contacts', label: 'New Contacts', icon: Users, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-50 dark:bg-blue-950/30' },
   { key: 'firstTimeMeetings', label: '1st Time Meetings', icon: CalendarCheck, color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-50 dark:bg-purple-950/30' },
   { key: 'newPotentials', label: 'New Potentials', icon: Briefcase, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-50 dark:bg-amber-950/30' },
-  { key: 'proposals', label: 'Proposals', icon: FileText, color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-50 dark:bg-green-950/30' },
+]
+
+const OUTCOME_CARDS: {
+  key: MetricKey
+  label: string
+  icon: typeof Users
+  color: string
+  bgColor: string
+}[] = [
+  { key: 'proposals', label: 'New Proposals', icon: FileText, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-50 dark:bg-blue-950/30' },
+  { key: 'dealsWon', label: 'Deals Won', icon: Trophy, color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-50 dark:bg-green-950/30' },
+  { key: 'dealsLost', label: 'Deals Lost', icon: XCircle, color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-50 dark:bg-red-950/30' },
 ]
 
 /** Collapsible user section in drilldown dialog */
@@ -144,6 +163,18 @@ const DRILLDOWN_COLUMNS: Record<MetricKey, { key: string; label: string; format?
     { key: 'stage', label: 'Stage' },
     { key: 'closingDate', label: 'Close Date', format: formatDate },
   ],
+  dealsWon: [
+    { key: 'name', label: 'Deal' },
+    { key: 'account', label: 'Account' },
+    { key: 'amount', label: 'Amount', format: (v) => formatCurrency(Number(v) || 0) },
+    { key: 'closingDate', label: 'Close Date', format: formatDate },
+  ],
+  dealsLost: [
+    { key: 'name', label: 'Deal' },
+    { key: 'account', label: 'Account' },
+    { key: 'amount', label: 'Amount', format: (v) => formatCurrency(Number(v) || 0) },
+    { key: 'closingDate', label: 'Close Date', format: formatDate },
+  ],
 }
 
 export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
@@ -169,8 +200,13 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
     return (
       <div className="space-y-3">
         <Skeleton className="h-5 w-64" />
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[...Array(5)].map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-lg" />
           ))}
         </div>
@@ -180,35 +216,14 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
 
   const { metrics, window: win } = data
 
-  const cards: { key: MetricKey; label: string; value: string | number; icon: typeof Users; color: string; bgColor: string }[] = [
-    ...METRIC_CONFIG.map((m) => {
-      const metricKey = m.key === 'proposals' ? 'proposalsCount' as const : m.key
-      return {
-        key: m.key,
-        label: m.label,
-        value: metrics[metricKey].count,
-        icon: m.icon,
-        color: m.color,
-        bgColor: m.bgColor,
-      }
-    }),
-    {
-      key: 'proposals' as MetricKey,
-      label: 'Proposal $',
-      value: formatCurrency(metrics.proposalsValue.total),
-      icon: DollarSign,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
-    },
-  ]
-
-  // Get drilldown data for the active metric
   function getDrilldown(key: MetricKey): GroupedDrilldown[] {
     switch (key) {
       case 'contacts': return metrics.contacts.drilldown
       case 'firstTimeMeetings': return metrics.firstTimeMeetings.drilldown
       case 'newPotentials': return metrics.newPotentials.drilldown
       case 'proposals': return metrics.proposalsCount.drilldown
+      case 'dealsWon': return metrics.dealsWon.drilldown
+      case 'dealsLost': return metrics.dealsLost.drilldown
     }
   }
 
@@ -217,7 +232,9 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
       contacts: 'New Contacts',
       firstTimeMeetings: 'First Time Meetings',
       newPotentials: 'New Potentials',
-      proposals: 'Proposals Delivered',
+      proposals: 'New Proposals',
+      dealsWon: 'Deals Won',
+      dealsLost: 'Deals Lost',
     }
     return `${labels[key]} — ${win.label}`
   }
@@ -228,6 +245,22 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
       case 'firstTimeMeetings': return metrics.firstTimeMeetings.count
       case 'newPotentials': return metrics.newPotentials.count
       case 'proposals': return metrics.proposalsCount.count
+      case 'dealsWon': return metrics.dealsWon.count
+      case 'dealsLost': return metrics.dealsLost.count
+    }
+  }
+
+  function getCardValue(key: MetricKey): string {
+    switch (key) {
+      case 'contacts': return String(metrics.contacts.count)
+      case 'firstTimeMeetings': return String(metrics.firstTimeMeetings.count)
+      case 'newPotentials': return String(metrics.newPotentials.count)
+      case 'proposals':
+        return `${metrics.proposalsCount.count} / ${formatCurrency(metrics.proposalsValue.total)}`
+      case 'dealsWon':
+        return `${metrics.dealsWon.count} / ${formatCurrency(metrics.dealsWon.total)}`
+      case 'dealsLost':
+        return `${metrics.dealsLost.count} / ${formatCurrency(metrics.dealsLost.total)}`
     }
   }
 
@@ -237,10 +270,12 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
         <p className="text-sm text-muted-foreground">
           CRM Weekly Metrics — {win.label}
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {cards.map((card, i) => (
+
+        {/* Row 1: Activity */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {ACTIVITY_CARDS.map((card) => (
             <button
-              key={i}
+              key={card.key}
               onClick={() => setActiveMetric(card.key)}
               className={`rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:shadow-sm ${card.bgColor}`}
             >
@@ -248,7 +283,24 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
                 <card.icon className={`h-4 w-4 ${card.color}`} />
                 <span className="text-xs text-muted-foreground font-medium">{card.label}</span>
               </div>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold">{getCardValue(card.key)}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Row 2: Outcomes */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {OUTCOME_CARDS.map((card) => (
+            <button
+              key={card.key}
+              onClick={() => setActiveMetric(card.key)}
+              className={`rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:shadow-sm ${card.bgColor}`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <card.icon className={`h-4 w-4 ${card.color}`} />
+                <span className="text-xs text-muted-foreground font-medium">{card.label}</span>
+              </div>
+              <p className="text-2xl font-bold">{getCardValue(card.key)}</p>
             </button>
           ))}
         </div>
@@ -277,8 +329,14 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
                       />
                     ))}
                     <p className="text-sm text-muted-foreground text-center pt-2">
-                      Total: {getTotalCount(activeMetric)} {activeMetric === 'contacts' ? 'contacts' : activeMetric === 'firstTimeMeetings' ? 'meetings' : activeMetric === 'newPotentials' ? 'deals' : 'proposals'}
-                      {activeMetric === 'proposals' && ` — ${formatCurrency(metrics.proposalsValue.total)}`}
+                      Total: {getTotalCount(activeMetric)} records
+                      {(activeMetric === 'proposals' || activeMetric === 'dealsWon' || activeMetric === 'dealsLost') &&
+                        ` — ${formatCurrency(
+                          activeMetric === 'proposals' ? metrics.proposalsValue.total
+                          : activeMetric === 'dealsWon' ? metrics.dealsWon.total
+                          : metrics.dealsLost.total
+                        )}`
+                      }
                     </p>
                   </>
                 )}
