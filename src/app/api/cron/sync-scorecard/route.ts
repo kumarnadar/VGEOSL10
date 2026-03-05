@@ -81,14 +81,13 @@ export async function GET(request: NextRequest) {
 
   for (const group of groups) {
     // Determine week_ending_day from scorecard_settings (default: friday)
-    const { data: settings } = await supabase
+    const { data: settingsRows } = await supabase
       .from('scorecard_settings')
       .select('setting_value')
       .eq('group_id', group.id)
       .eq('setting_key', 'week_ending_day')
-      .single()
 
-    const weekEndingDayName = (settings?.setting_value || 'friday').toLowerCase()
+    const weekEndingDayName = (settingsRows?.[0]?.setting_value || 'friday').toLowerCase()
     const targetDay = DAY_MAP[weekEndingDayName] ?? 5 // default Friday
     const weekEnding = lastCompletedWeekEnding(targetDay)
 

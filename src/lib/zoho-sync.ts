@@ -177,6 +177,7 @@ export async function syncZohoToScorecard(
     .from('profiles')
     .select('id, zoho_user_id, team_region')
     .not('zoho_user_id', 'is', null)
+    .neq('zoho_user_id', '')
 
   if (profErr) {
     throw new Error(`Failed to load profiles: ${profErr.message}`)

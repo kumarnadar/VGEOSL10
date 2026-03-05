@@ -608,6 +608,7 @@ function MeasuresSection({ groupId }: { groupId: string }) {
 }
 
 function ZohoSyncSection({ groupId }: { groupId: string }) {
+  const { data: settings } = useScorecardSettings(groupId)
   const [syncing, setSyncing] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
@@ -617,14 +618,20 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
     setResult(null)
     setSyncError(null)
     try {
-      // Calculate last week ending (most recent Friday)
+      // Calculate last completed week ending based on scorecard's week_ending_day setting
+      const dayMap: Record<string, number> = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+        thursday: 4, friday: 5, saturday: 6,
+      }
+      const weekEndingDay = settings?.week_ending_day || 'friday'
+      const targetDay = dayMap[weekEndingDay.toLowerCase()] ?? 5
       const now = new Date()
       const today = now.getDay()
-      let daysBack = (today - 5 + 7) % 7 // 5 = Friday
+      let daysBack = (today - targetDay + 7) % 7
       if (daysBack === 0) daysBack = 7
-      const lastFriday = new Date(now)
-      lastFriday.setDate(now.getDate() - daysBack)
-      const weekEnding = lastFriday.toISOString().slice(0, 10)
+      const lastWeekEnd = new Date(now)
+      lastWeekEnd.setDate(now.getDate() - daysBack)
+      const weekEnding = lastWeekEnd.toISOString().slice(0, 10)
 
       const res = await fetch('/api/zoho/sync-scorecard', {
         method: 'POST',
