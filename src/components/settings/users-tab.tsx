@@ -148,8 +148,6 @@ function InviteDialog({ groups }: { groups: GroupOption[] }) {
 interface ZohoUser {
   id: string
   name: string
-  email: string
-  role: string
 }
 
 function EditUserDialog({
@@ -282,7 +280,7 @@ function EditUserDialog({
                   <SelectItem value="_none">Not linked</SelectItem>
                   {(zohoUsers || []).map((zu) => (
                     <SelectItem key={zu.id} value={zu.id}>
-                      {zu.name} ({zu.email})
+                      {zu.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
