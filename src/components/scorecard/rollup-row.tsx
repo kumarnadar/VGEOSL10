@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatValue, percentToGoal } from '@/lib/scorecard-utils'
+import { formatValue, percentToGoal, goalColorVariant } from '@/lib/scorecard-utils'
 import { Badge } from '@/components/ui/badge'
 
 interface RollupRowProps {
@@ -14,6 +14,8 @@ interface RollupRowProps {
   weekTotals: Map<string, number>
   goalTotal: number | null
   dataType: string
+  thresholdGreen?: number
+  thresholdYellow?: number
   children?: React.ReactNode
   defaultExpanded?: boolean
 }
@@ -25,6 +27,8 @@ export function RollupRow({
   weekTotals,
   goalTotal,
   dataType,
+  thresholdGreen,
+  thresholdYellow,
   children,
   defaultExpanded = false,
 }: RollupRowProps) {
@@ -93,7 +97,7 @@ export function RollupRow({
         <td className="text-right px-3 py-2">
           {pctToGoal != null ? (
             <Badge
-              variant={pctToGoal >= 0.9 ? 'success' : pctToGoal >= 0.7 ? 'warning' : 'danger'}
+              variant={goalColorVariant(pctToGoal, thresholdGreen ?? 90, thresholdYellow ?? 50)}
               className="text-xs"
             >
               {(pctToGoal * 100).toFixed(0)}%

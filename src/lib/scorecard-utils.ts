@@ -105,3 +105,38 @@ export function percentToGoal(total: number, goal: number): number {
   if (goal === 0) return 0
   return total / goal
 }
+
+/** Get the color variant for a % to goal value based on configurable thresholds */
+export function goalColorVariant(
+  pct: number,
+  thresholdGreen: number = 90,
+  thresholdYellow: number = 50,
+): 'success' | 'warning' | 'danger' {
+  if (pct * 100 >= thresholdGreen) return 'success'
+  if (pct * 100 >= thresholdYellow) return 'warning'
+  return 'danger'
+}
+
+/** Get all week-ending dates for a quarter */
+export function getWeekEndingsForQuarter(
+  quarter: string,
+  weekEndingDay: string = 'friday',
+): string[] {
+  const [yearStr, qPart] = quarter.split('-Q')
+  const year = parseInt(yearStr)
+  const q = parseInt(qPart)
+  const startMonth = (q - 1) * 3 // 0-indexed
+  const weeks: string[] = []
+  for (let m = 0; m < 3; m++) {
+    weeks.push(...getWeekEndingsForMonth(year, startMonth + m, weekEndingDay))
+  }
+  // Deduplicate (month boundaries can overlap)
+  return [...new Set(weeks)].sort()
+}
+
+/** Determine the current week-ending date */
+export function getCurrentWeekEnding(weekEndingDay: string = 'friday'): string {
+  const now = new Date()
+  const we = getWeekEnding(now, weekEndingDay)
+  return formatDate(we)
+}

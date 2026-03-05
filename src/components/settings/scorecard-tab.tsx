@@ -150,6 +150,7 @@ function GoalsSection({ groupId }: { groupId: string }) {
   const currentQuarter = getCurrentQuarter()
   const [quarter, setQuarter] = useState(currentQuarter)
   const [editedGoals, setEditedGoals] = useState<Record<string, string>>({})
+  const [editedThresholds, setEditedThresholds] = useState<Record<string, { green?: string; yellow?: string }>>({})
   const [saving, setSaving] = useState(false)
 
   const { data: template } = useScorecardTemplate(groupId)
@@ -175,6 +176,21 @@ function GoalsSection({ groupId }: { groupId: string }) {
     setEditedGoals((prev) => ({ ...prev, [measureId]: value }))
   }
 
+  function getThresholdValue(measureId: string, color: 'green' | 'yellow'): string {
+    const edited = editedThresholds[measureId]
+    if (edited && edited[color] !== undefined) return edited[color]!
+    const existing = goalByMeasure[measureId]
+    if (color === 'green') return String(existing?.threshold_green ?? 90)
+    return String(existing?.threshold_yellow ?? 50)
+  }
+
+  function handleThresholdChange(measureId: string, color: 'green' | 'yellow', value: string) {
+    setEditedThresholds((prev) => ({
+      ...prev,
+      [measureId]: { ...prev[measureId], [color]: value },
+    }))
+  }
+
   async function handleSaveGoals() {
     if (!user) return
     setSaving(true)
@@ -197,22 +213,35 @@ function GoalsSection({ groupId }: { groupId: string }) {
         if (existing) {
           const { error } = await supabase
             .from('scorecard_goals')
-            .update({ goal_value: goalValue })
+            .update({
+              goal_value: goalValue,
+              threshold_green: parseInt(getThresholdValue(measureId, 'green')) || 90,
+              threshold_yellow: parseInt(getThresholdValue(measureId, 'yellow')) || 50,
+            })
             .eq('id', existing.id)
           if (error) throw error
         } else {
           const { error } = await supabase
             .from('scorecard_goals')
-            .insert({ measure_id: measureId, quarter, goal_value: goalValue, set_by: user.id })
+            .insert({
+              measure_id: measureId,
+              quarter,
+              goal_value: goalValue,
+              set_by: user.id,
+              threshold_green: parseInt(getThresholdValue(measureId, 'green')) || 90,
+              threshold_yellow: parseInt(getThresholdValue(measureId, 'yellow')) || 50,
+            })
           if (error) throw error
         }
       }
 
-      if (changedEntries.length === 0) {
+      const hasThresholdChanges = Object.keys(editedThresholds).length > 0
+      if (changedEntries.length === 0 && !hasThresholdChanges) {
         toast.info('No changes to save')
       } else {
         toast.success(`Saved ${changedEntries.length} goal(s)`)
         setEditedGoals({})
+        setEditedThresholds({})
         mutate(`scorecard-goals-${groupId}-${quarter}`)
       }
     } catch {
@@ -221,15 +250,16 @@ function GoalsSection({ groupId }: { groupId: string }) {
     setSaving(false)
   }
 
-  const hasChanges = Object.keys(editedGoals).some((measureId) => {
-    const raw = editedGoals[measureId]
-    if (raw === '') return false
-    const parsed = parseInt(raw)
-    if (isNaN(parsed)) return false
-    const existing = goalByMeasure[measureId]
-    if (existing == null) return true
-    return Math.round(existing.goal_value) !== parsed
-  })
+  const hasChanges =
+    Object.keys(editedGoals).some((measureId) => {
+      const raw = editedGoals[measureId]
+      if (raw === '') return false
+      const parsed = parseInt(raw)
+      if (isNaN(parsed)) return false
+      const existing = goalByMeasure[measureId]
+      if (existing == null) return true
+      return Math.round(existing.goal_value) !== parsed
+    }) || Object.keys(editedThresholds).length > 0
 
   return (
     <div className="rounded-lg border p-6 space-y-4">
@@ -259,30 +289,52 @@ function GoalsSection({ groupId }: { groupId: string }) {
 
       {sections.length > 0 && (
         <div className="space-y-2">
-          <div className="grid grid-cols-[1fr_2fr_100px_120px] gap-2 text-xs font-medium text-muted-foreground px-1">
+          <div className="grid grid-cols-[1fr_2fr_80px_80px_100px_70px_70px] gap-2 text-xs font-medium text-muted-foreground px-1">
             <span>Section</span>
             <span>Measure</span>
-            <span>Data Type</span>
+            <span>Type</span>
+            <span>Data</span>
             <span>Goal</span>
+            <span>Green %</span>
+            <span>Yellow %</span>
           </div>
 
           {sections.flatMap((section: any) =>
             (section.scorecard_measures || []).map((m: any) => (
               <div
                 key={m.id}
-                className="grid grid-cols-[1fr_2fr_100px_120px] gap-2 items-center rounded-md border px-3 py-2"
+                className="grid grid-cols-[1fr_2fr_80px_80px_100px_70px_70px] gap-2 items-center rounded-md border px-3 py-2"
               >
                 <span className="text-sm text-muted-foreground">{section.name}</span>
                 <span className="text-sm">{m.name}</span>
-                <span className="text-xs text-muted-foreground capitalize">{m.unit}</span>
+                <span className="text-xs text-muted-foreground capitalize">{m.goal_type || 'weekly'}</span>
+                <span className="text-xs text-muted-foreground capitalize">{m.data_type}</span>
                 <Input
                   type="number"
                   min="0"
                   step="1"
                   className="h-8 text-sm w-24"
-                  placeholder="—"
+                  placeholder="--"
                   value={getDisplayValue(m.id)}
                   onChange={(e) => handleGoalChange(m.id, e.target.value)}
+                />
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  className="h-7 text-xs w-16"
+                  placeholder="90"
+                  value={getThresholdValue(m.id, 'green')}
+                  onChange={(e) => handleThresholdChange(m.id, 'green', e.target.value)}
+                />
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  className="h-7 text-xs w-16"
+                  placeholder="50"
+                  value={getThresholdValue(m.id, 'yellow')}
+                  onChange={(e) => handleThresholdChange(m.id, 'yellow', e.target.value)}
                 />
               </div>
             ))
@@ -613,12 +665,11 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
   const [result, setResult] = useState<any>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
 
-  async function handleSync(weeks: number = 1) {
+  async function handleSync() {
     setSyncing(true)
     setResult(null)
     setSyncError(null)
     try {
-      // Calculate last completed week ending based on scorecard's week_ending_day setting
       const dayMap: Record<string, number> = {
         sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
         thursday: 4, friday: 5, saturday: 6,
@@ -627,21 +678,21 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
       const targetDay = dayMap[weekEndingDay.toLowerCase()] ?? 5
       const now = new Date()
       const today = now.getDay()
-      let daysBack = (today - targetDay + 7) % 7
-      if (daysBack === 0) daysBack = 7
-      const lastWeekEnd = new Date(now)
-      lastWeekEnd.setDate(now.getDate() - daysBack)
-      const weekEnding = lastWeekEnd.toISOString().slice(0, 10)
+      // Get the current week's ending date (upcoming or today if it's the target day)
+      const daysForward = (targetDay - today + 7) % 7
+      const currentWeekEnd = new Date(now)
+      currentWeekEnd.setDate(now.getDate() + daysForward)
+      const weekEnding = currentWeekEnd.toISOString().slice(0, 10)
 
       const res = await fetch('/api/zoho/sync-scorecard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, weekEnding, weeks }),
+        body: JSON.stringify({ groupId, weekEnding, weeks: 1 }),
       })
       const data = await res.json()
       if (data.success) {
         setResult(data)
-        toast.success(`Synced ${data.entriesUpserted} entries for ${data.weeksProcessed} week(s)`)
+        toast.success(`Synced ${data.entriesUpserted} entries for current week`)
       } else {
         setSyncError(data.error || 'Sync failed')
         toast.error(data.error || 'Sync failed')
@@ -659,15 +710,12 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
       <div>
         <h3 className="text-lg font-semibold">Zoho CRM Sync</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Populate scorecard entries from Zoho CRM data. Runs automatically every Saturday, or sync manually below.
+          Populate scorecard entries from Zoho CRM data for the current week. Runs automatically every Saturday via cron.
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <Button onClick={() => handleSync(1)} disabled={syncing}>
-          {syncing ? 'Syncing...' : 'Sync Last Week'}
-        </Button>
-        <Button variant="outline" onClick={() => handleSync(5)} disabled={syncing}>
-          {syncing ? 'Syncing...' : 'Backfill (5 Weeks)'}
+        <Button onClick={handleSync} disabled={syncing}>
+          {syncing ? 'Syncing...' : 'Sync Current Week'}
         </Button>
       </div>
       {syncError && (
@@ -678,8 +726,7 @@ function ZohoSyncSection({ groupId }: { groupId: string }) {
       )}
       {result && (
         <div className="rounded border bg-muted/50 p-3 text-sm space-y-1">
-          <p>Weeks processed: {result.weeksProcessed}</p>
-          <p>Entries upserted: {result.entriesUpserted}</p>
+          <p>Entries synced: {result.entriesUpserted}</p>
           {result.unmappedZohoUsers?.length > 0 && (
             <p className="text-amber-600">Unmapped Zoho users: {result.unmappedZohoUsers.join(', ')}</p>
           )}

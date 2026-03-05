@@ -9,6 +9,7 @@ import {
   useScorecardEntries,
   useScorecardGoals,
   useScorecardSettings,
+  useScorecardEntriesForQuarter,
 } from '@/hooks/use-scorecard'
 import { ScorecardGrid } from '@/components/scorecard/scorecard-grid'
 import { ScorecardTimeHeader } from '@/components/scorecard/scorecard-time-header'
@@ -17,7 +18,7 @@ import { GoalEditor } from '@/components/scorecard/goal-editor'
 import { TableSkeleton } from '@/components/page-skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getCurrentQuarterLabel } from '@/lib/scorecard-utils'
+import { getCurrentQuarterLabel, getCurrentWeekEnding } from '@/lib/scorecard-utils'
 import Link from 'next/link'
 
 export default function ScorecardPage() {
@@ -34,6 +35,8 @@ export default function ScorecardPage() {
   const { data: template, isLoading: templateLoading } = useScorecardTemplate(groupId)
   const { data: entries, isLoading: entriesLoading } = useScorecardEntries(groupId, weekEndings)
   const { data: goals } = useScorecardGoals(groupId, quarterLabel)
+  const { data: quarterEntries } = useScorecardEntriesForQuarter(groupId, quarterLabel, settings?.week_ending_day)
+  const currentWeekEnding = getCurrentWeekEnding(settings?.week_ending_day)
 
   // Goal editor state
   const [goalEditor, setGoalEditor] = useState<{
@@ -128,6 +131,9 @@ export default function ScorecardPage() {
           onGoalEdit={(goalId, measureId, measureName, dataType, currentValue) => {
             setGoalEditor({ open: true, goalId, measureId, measureName, dataType, currentValue })
           }}
+          currentWeekEnding={currentWeekEnding}
+          quarterEntries={quarterEntries || []}
+          weekEndingDay={settings?.week_ending_day}
         />
       )}
 

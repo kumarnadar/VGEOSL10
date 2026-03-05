@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback } from 'react'
 import { cn } from '@/lib/utils'
-import { formatValue, formatWeekHeader, percentToGoal } from '@/lib/scorecard-utils'
+import { formatValue, formatWeekHeader, percentToGoal, goalColorVariant, getCurrentWeekEnding } from '@/lib/scorecard-utils'
 import { Badge } from '@/components/ui/badge'
 import { RollupRow, computeRollupTotals, computeGoalTotal } from './rollup-row'
 import { CellEntryPopover } from './cell-entry-popover'
@@ -15,6 +15,9 @@ interface ScorecardGridProps {
   weekEndings: string[]
   groupId: string
   quarter?: string
+  currentWeekEnding?: string
+  quarterEntries?: any[]
+  weekEndingDay?: string
   readOnly?: boolean
   onCellClick?: (entryId: string | null, measureId: string, weekEnding: string) => void
   onCreateIssue?: (measureName: string, value: number | null, goal: number | null) => void
@@ -28,6 +31,9 @@ export function ScorecardGrid({
   weekEndings,
   groupId,
   quarter,
+  currentWeekEnding,
+  quarterEntries,
+  weekEndingDay,
   readOnly = false,
   onCellClick,
   onCreateIssue,
@@ -123,6 +129,27 @@ export function ScorecardGrid({
     return map
   }, [goals])
 
+  // Build goal metadata maps (thresholds, baseline)
+  const goalMetaMap = useMemo(() => {
+    const map = new Map<string, { baseline: number; thresholdGreen: number; thresholdYellow: number }>()
+    goals?.forEach((g: any) => map.set(g.measure_id, {
+      baseline: g.baseline_value ?? 0,
+      thresholdGreen: g.threshold_green ?? 90,
+      thresholdYellow: g.threshold_yellow ?? 50,
+    }))
+    return map
+  }, [goals])
+
+  // Build cumulative running total map (measure_id -> total across all quarter weeks)
+  const cumulativeMap = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!quarterEntries) return map
+    quarterEntries.forEach((e: any) => {
+      map.set(e.measure_id, (map.get(e.measure_id) || 0) + Number(e.value || 0))
+    })
+    return map
+  }, [quarterEntries])
+
   // Build a lookup of measure id -> measure object for formula access
   const measureById = useMemo(() => {
     const map = new Map<string, any>()
@@ -150,9 +177,29 @@ export function ScorecardGrid({
   }, [template])
 
   // Calculate total for a measure across visible weeks (from aggregateMap)
-  // For ratio measures, compute total as overall numerator / overall denominator
+  // Handles weekly (sum), cumulative (baseline + all quarter entries), and point_in_time (latest value)
   const getMeasureTotal = useCallback((measureId: string) => {
     const measure = measureById.get(measureId)
+    const goalType = measure?.goal_type || 'weekly'
+
+    // Point-in-time: show latest week's value only (not summed)
+    if (goalType === 'point_in_time') {
+      for (let i = weekEndings.length - 1; i >= 0; i--) {
+        const val = aggregateMap.get(`${measureId}-${weekEndings[i]}`)
+        if (val !== undefined && val !== 0) return val
+      }
+      return 0
+    }
+
+    // Cumulative: return running total (baseline + all quarter entries)
+    if (goalType === 'cumulative') {
+      const meta = goalMetaMap.get(measureId)
+      const baseline = meta?.baseline ?? 0
+      const runningTotal = cumulativeMap.get(measureId) ?? 0
+      return baseline + runningTotal
+    }
+
+    // Weekly: sum visible weeks (original behavior)
     const formula = measure?.calculation_formula
     if (formula?.type === 'ratio' && formula.numerator && formula.denominator) {
       const nameMap = sectionNameToId.get(measureId)
@@ -172,7 +219,7 @@ export function ScorecardGrid({
       total += aggregateMap.get(`${measureId}-${week}`) || 0
     })
     return total
-  }, [weekEndings, aggregateMap, measureById, sectionNameToId])
+  }, [weekEndings, aggregateMap, measureById, sectionNameToId, goalMetaMap, cumulativeMap])
 
   if (!template?.scorecard_sections) return null
 
@@ -210,6 +257,8 @@ export function ScorecardGrid({
               groupId={groupId}
               readOnly={readOnly}
               getMeasureTotal={getMeasureTotal}
+              goalMetaMap={goalMetaMap}
+              currentWeekEnding={currentWeekEnding}
               onDetailClick={onCellClick}
               onCreateIssue={onCreateIssue}
               onGoalEdit={onGoalEdit}
@@ -234,6 +283,8 @@ interface ScorecardSectionProps {
   groupId: string
   readOnly: boolean
   getMeasureTotal: (measureId: string) => number
+  goalMetaMap: Map<string, { baseline: number; thresholdGreen: number; thresholdYellow: number }>
+  currentWeekEnding?: string
   onDetailClick?: (entryId: string | null, measureId: string, weekEnding: string) => void
   onCreateIssue?: (measureName: string, value: number | null, goal: number | null) => void
   onGoalEdit?: (goalId: string | null, measureId: string, measureName: string, dataType: string, currentValue: number | null) => void
@@ -252,6 +303,8 @@ function ScorecardSection({
   groupId,
   readOnly,
   getMeasureTotal,
+  goalMetaMap,
+  currentWeekEnding,
   onDetailClick,
   onCreateIssue,
   onGoalEdit,
@@ -284,6 +337,10 @@ function ScorecardSection({
           const goal = goalMap.get(measure.id)
           const total = getMeasureTotal(measure.id)
           const pctToGoal = goal ? percentToGoal(total, goal) : null
+          const goalType = measure.goal_type || 'weekly'
+          const meta = goalMetaMap.get(measure.id)
+          const thresholdGreen = meta?.thresholdGreen ?? 90
+          const thresholdYellow = meta?.thresholdYellow ?? 50
 
           return (
             <tr key={measure.id} className="border-t hover:bg-muted/30 transition-colors">
@@ -331,9 +388,21 @@ function ScorecardSection({
                 }
 
                 const isZohoCell = zohoSourceMap.has(`${measure.id}-${week}`)
+                const isPastWeek = currentWeekEnding ? week < currentWeekEnding : false
+                const isLocked = goalType === 'point_in_time' && isPastWeek && !measure.is_calculated
+
+                // Determine cell background for weekly goal type
+                let cellBgClass = ''
+                if (goal && aggValue > 0 && goalType === 'weekly') {
+                  const cellPct = aggValue / goal
+                  const variant = goalColorVariant(cellPct, thresholdGreen, thresholdYellow)
+                  cellBgClass = variant === 'success' ? 'bg-green-50 dark:bg-green-950/30'
+                    : variant === 'warning' ? 'bg-yellow-50 dark:bg-yellow-950/30'
+                    : 'bg-red-50 dark:bg-red-950/30'
+                }
 
                 return (
-                  <td key={week} className="text-right px-3 py-1.5 relative">
+                  <td key={week} className={cn('text-right px-3 py-1.5 relative', cellBgClass)}>
                     <CellEntryPopover
                       measureId={measure.id}
                       measureName={measure.name}
@@ -344,7 +413,7 @@ function ScorecardSection({
                       members={members}
                       userEntryMap={userEntryMap}
                       aggregateValue={aggValue}
-                      readOnly={readOnly}
+                      readOnly={readOnly || isLocked}
                     >
                       <button
                         aria-label={`Enter value for ${measure.name}`}
@@ -368,6 +437,12 @@ function ScorecardSection({
 
               {/* Total */}
               <td className="text-right px-3 py-1.5 font-medium">
+                {goalType === 'cumulative' && total > 0 && (
+                  <span className="text-[10px] text-muted-foreground block">YTD</span>
+                )}
+                {goalType === 'point_in_time' && total > 0 && (
+                  <span className="text-[10px] text-muted-foreground block">latest</span>
+                )}
                 {total > 0 ? formatValue(total, measure.data_type) : '-'}
               </td>
 
@@ -375,7 +450,7 @@ function ScorecardSection({
               <td className="text-right px-3 py-1.5">
                 {pctToGoal != null ? (
                   <Badge
-                    variant={pctToGoal >= 0.9 ? 'success' : pctToGoal >= 0.7 ? 'warning' : 'danger'}
+                    variant={goalColorVariant(pctToGoal, thresholdGreen, thresholdYellow)}
                     className="text-xs"
                   >
                     {(pctToGoal * 100).toFixed(0)}%

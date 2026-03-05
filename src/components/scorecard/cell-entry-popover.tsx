@@ -126,6 +126,9 @@ export function CellEntryPopover({
           <div>
             <p className="text-sm font-medium">{measureName}</p>
             <p className="text-xs text-muted-foreground">Week ending {formatWeekHeader(weekEnding)}</p>
+            {readOnly && (
+              <p className="text-xs text-amber-600 mt-1">This cell is locked (point-in-time snapshot).</p>
+            )}
           </div>
           <Separator />
           <div className="space-y-1.5">

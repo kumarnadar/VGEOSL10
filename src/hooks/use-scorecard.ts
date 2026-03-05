@@ -105,6 +105,32 @@ export function useScorecardGoals(groupId: string, quarter: string) {
   )
 }
 
+export function useScorecardEntriesForQuarter(groupId: string, quarter: string, weekEndingDay: string = 'friday') {
+  const supabase = createClient()
+
+  return useSWR(
+    groupId && quarter ? `scorecard-entries-quarter-${groupId}-${quarter}` : null,
+    async () => {
+      const measureIds = await getMeasureIdsForGroup(supabase, groupId)
+      if (measureIds.length === 0) return []
+
+      const { getWeekEndingsForQuarter } = await import('@/lib/scorecard-utils')
+      const allWeeks = getWeekEndingsForQuarter(quarter, weekEndingDay)
+      if (allWeeks.length === 0) return []
+
+      const { data, error } = await supabase
+        .from('scorecard_entries')
+        .select('measure_id, week_ending, value')
+        .in('measure_id', measureIds)
+        .in('week_ending', allWeeks)
+
+      if (error) throw error
+      return data || []
+    },
+    { refreshInterval: 60000 }
+  )
+}
+
 export function useEntryDetails(entryId: string | null) {
   const supabase = createClient()
 
