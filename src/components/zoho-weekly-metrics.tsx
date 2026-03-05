@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Card, CardContent } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Users, CalendarCheck, Briefcase, FileText, DollarSign, ChevronDown, ChevronRight } from 'lucide-react'
@@ -254,15 +254,15 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
         </div>
       </div>
 
-      {/* Drilldown Dialog */}
-      <Dialog open={activeMetric !== null} onOpenChange={(open) => { if (!open) setActiveMetric(null) }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Drilldown Sheet */}
+      <Sheet open={activeMetric !== null} onOpenChange={(open) => { if (!open) setActiveMetric(null) }}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           {activeMetric && (
             <>
-              <DialogHeader>
-                <DialogTitle>{getDialogTitle(activeMetric)}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3 mt-2">
+              <SheetHeader className="sticky top-0 bg-background pb-4 border-b mb-4 z-10">
+                <SheetTitle>{getDialogTitle(activeMetric)}</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-3">
                 {getDrilldown(activeMetric).length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No records found for this period</p>
                 ) : (
@@ -285,8 +285,8 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
               </div>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   )
 }

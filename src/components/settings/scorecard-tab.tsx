@@ -50,7 +50,12 @@ interface MeasureForm {
 }
 
 export function ScorecardTab({ groups }: { groups: { id: string; name: string }[] }) {
-  const [selectedGroupId, setSelectedGroupId] = useState(groups[0]?.id || '')
+  // Try to default to the group with a scorecard template (Business Dev / BDEV)
+  const defaultGroup = groups.find((g) => {
+    const n = g.name.toUpperCase()
+    return n.includes('BDEV') || n.includes('BUSINESS DEV') || n.includes('BUSINESS DEVELOPMENT')
+  })?.id || groups[0]?.id || ''
+  const [selectedGroupId, setSelectedGroupId] = useState(defaultGroup)
 
   if (groups.length === 0) {
     return <p className="text-muted-foreground">No groups available.</p>
@@ -284,7 +289,7 @@ function GoalsSection({ groupId }: { groupId: string }) {
       </div>
 
       {sections.length === 0 && (
-        <p className="text-sm text-muted-foreground">No scorecard template found for this group.</p>
+        <p className="text-sm text-muted-foreground">No scorecard template found for this group. Select a group with a scorecard template (e.g., BDEV).</p>
       )}
 
       {sections.length > 0 && (
@@ -599,7 +604,7 @@ function MeasuresSection({ groupId }: { groupId: string }) {
       </p>
 
       {sections.length === 0 && (
-        <p className="text-sm text-muted-foreground">No scorecard template found for this group.</p>
+        <p className="text-sm text-muted-foreground">No scorecard template found for this group. Select a group with a scorecard template (e.g., BDEV).</p>
       )}
 
       {sections.map((section: any) => {

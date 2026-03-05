@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   BarChart,
@@ -248,15 +248,15 @@ export function ZohoCrmSection({ groupId }: { groupId?: string }) {
         </CardContent>
       </Card>
 
-      {/* Drilldown Dialog */}
-      <Dialog open={activeStat !== null} onOpenChange={(open) => { if (!open) setActiveStat(null) }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Drilldown Sheet */}
+      <Sheet open={activeStat !== null} onOpenChange={(open) => { if (!open) setActiveStat(null) }}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           {activeStat && (
             <>
-              <DialogHeader>
-                <DialogTitle>{getDialogTitle(activeStat)}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3 mt-2">
+              <SheetHeader className="sticky top-0 bg-background pb-4 border-b mb-4 z-10">
+                <SheetTitle>{getDialogTitle(activeStat)}</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-3">
                 {getDrilldown(activeStat).length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No deals found</p>
                 ) : (
@@ -272,8 +272,8 @@ export function ZohoCrmSection({ groupId }: { groupId?: string }) {
               </div>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
