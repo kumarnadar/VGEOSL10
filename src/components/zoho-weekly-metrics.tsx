@@ -136,6 +136,13 @@ function UserSection({
   )
 }
 
+const DEAL_CLOSURE_COLUMNS: { key: string; label: string; format?: (v: unknown) => string }[] = [
+  { key: 'name', label: 'Deal' },
+  { key: 'account', label: 'Account' },
+  { key: 'amount', label: 'Amount', format: (v) => formatCurrency(Number(v) || 0) },
+  { key: 'closingDate', label: 'Close Date', format: formatDate },
+]
+
 const DRILLDOWN_COLUMNS: Record<MetricKey, { key: string; label: string; format?: (v: unknown) => string }[]> = {
   contacts: [
     { key: 'name', label: 'Name' },
@@ -163,18 +170,8 @@ const DRILLDOWN_COLUMNS: Record<MetricKey, { key: string; label: string; format?
     { key: 'stage', label: 'Stage' },
     { key: 'closingDate', label: 'Close Date', format: formatDate },
   ],
-  dealsWon: [
-    { key: 'name', label: 'Deal' },
-    { key: 'account', label: 'Account' },
-    { key: 'amount', label: 'Amount', format: (v) => formatCurrency(Number(v) || 0) },
-    { key: 'closingDate', label: 'Close Date', format: formatDate },
-  ],
-  dealsLost: [
-    { key: 'name', label: 'Deal' },
-    { key: 'account', label: 'Account' },
-    { key: 'amount', label: 'Amount', format: (v) => formatCurrency(Number(v) || 0) },
-    { key: 'closingDate', label: 'Close Date', format: formatDate },
-  ],
+  dealsWon: DEAL_CLOSURE_COLUMNS,
+  dealsLost: DEAL_CLOSURE_COLUMNS,
 }
 
 export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
@@ -271,55 +268,42 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
           CRM Weekly Metrics — {win.label}
         </p>
 
-        {/* Row 1: Activity */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {ACTIVITY_CARDS.map((card) => (
-            <button
-              key={card.key}
-              onClick={() => setActiveMetric(card.key)}
-              className={`rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:shadow-sm ${card.bgColor}`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className={`h-4 w-4 ${card.color}`} />
-                <span className="text-xs text-muted-foreground font-medium">{card.label}</span>
-              </div>
-              <p className="text-2xl font-bold">{getCardValue(card.key)}</p>
-            </button>
-          ))}
-        </div>
-
-        {/* Row 2: Outcomes */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {OUTCOME_CARDS.map((card) => (
-            <button
-              key={card.key}
-              onClick={() => setActiveMetric(card.key)}
-              className={`rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:shadow-sm ${card.bgColor}`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className={`h-4 w-4 ${card.color}`} />
-                <span className="text-xs text-muted-foreground font-medium">{card.label}</span>
-              </div>
-              <p className="text-2xl font-bold">{getCardValue(card.key)}</p>
-            </button>
-          ))}
-        </div>
+        {/* Row 1: Activity, Row 2: Outcomes */}
+        {[ACTIVITY_CARDS, OUTCOME_CARDS].map((cards, rowIdx) => (
+          <div key={rowIdx} className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {cards.map((card) => (
+              <button
+                key={card.key}
+                onClick={() => setActiveMetric(card.key)}
+                className={`rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:shadow-sm ${card.bgColor}`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <card.icon className={`h-4 w-4 ${card.color}`} />
+                  <span className="text-xs text-muted-foreground font-medium">{card.label}</span>
+                </div>
+                <p className="text-2xl font-bold">{getCardValue(card.key)}</p>
+              </button>
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* Drilldown Sheet */}
       <Sheet open={activeMetric !== null} onOpenChange={(open) => { if (!open) setActiveMetric(null) }}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-          {activeMetric && (
+          {activeMetric && (() => {
+            const drilldown = getDrilldown(activeMetric)
+            return (
             <>
               <SheetHeader className="sticky top-0 bg-background pb-4 border-b mb-4 z-10">
                 <SheetTitle>{getDialogTitle(activeMetric)}</SheetTitle>
               </SheetHeader>
               <div className="space-y-3">
-                {getDrilldown(activeMetric).length === 0 ? (
+                {drilldown.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No records found for this period</p>
                 ) : (
                   <>
-                    {getDrilldown(activeMetric).map((group, i) => (
+                    {drilldown.map((group, i) => (
                       <UserSection
                         key={group.userName}
                         userName={group.userName}
@@ -342,7 +326,8 @@ export function ZohoWeeklyMetrics({ groupId }: { groupId?: string }) {
                 )}
               </div>
             </>
-          )}
+            )
+          })()}
         </SheetContent>
       </Sheet>
     </>
