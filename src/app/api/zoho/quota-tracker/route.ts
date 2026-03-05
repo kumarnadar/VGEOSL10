@@ -86,14 +86,16 @@ export async function GET(req: NextRequest) {
   const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()), 10)
   const quarter = parseInt(searchParams.get('quarter') || String(currentQuarter()), 10)
 
-  if (quarter < 1 || quarter > 4 || isNaN(year)) {
+  if (quarter < 1 || quarter > 4 || isNaN(year) || year < 2020 || year > 2099) {
     return NextResponse.json({ error: 'Invalid quarter or year' }, { status: 400 })
   }
 
   try {
     const { start, end } = getQuarterDateRange(quarter, year)
 
-    // --- Fetch all deals from Zoho (paginated) ---
+    // Fetch all deals then filter by quarter in JS. The Zoho Deals list endpoint
+    // doesn't support criteria filters (unlike /search), and we need all stages
+    // including pipeline deals which have no Modified_Time correlation to quarter.
     const allDeals: ZohoDeal[] = []
     let page = 1
     let hasMore = true

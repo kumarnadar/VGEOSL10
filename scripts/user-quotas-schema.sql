@@ -41,23 +41,17 @@ CREATE POLICY "user_quotas_select_authenticated"
 -- Only admins can insert quotas
 CREATE POLICY "user_quotas_insert_admin"
   ON user_quotas FOR INSERT
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('system_admin', 'admin'))
-  );
+  WITH CHECK (is_admin_or_sysadmin());
 
 -- Only admins can update quotas
 CREATE POLICY "user_quotas_update_admin"
   ON user_quotas FOR UPDATE
-  USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('system_admin', 'admin'))
-  );
+  USING (is_admin_or_sysadmin());
 
 -- Only admins can delete quotas
 CREATE POLICY "user_quotas_delete_admin"
   ON user_quotas FOR DELETE
-  USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('system_admin', 'admin'))
-  );
+  USING (is_admin_or_sysadmin());
 
 COMMIT;
 

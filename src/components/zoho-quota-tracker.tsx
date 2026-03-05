@@ -199,7 +199,7 @@ function QuotaBarLabel({
     const pct = Math.round((total / quota) * 100)
     label = `${formatCurrency(total)} / ${formatCurrency(quota)} (${pct}%)`
   } else {
-    label = formatCurrency(total)
+    label = total > 0 ? formatCurrency(total) : 'No quota set'
   }
 
   return (
@@ -407,7 +407,7 @@ export function ZohoQuotaTracker({ groupId }: { groupId?: string }) {
                   <span>
                     Pipeline: <span className="font-medium text-primary">{formatCurrency(activeUser.pipeline)}</span>
                   </span>
-                  {activeUser.quota !== null && (
+                  {activeUser.quota !== null && activeUser.quota > 0 && (
                     <span>
                       Quota: <span className="font-medium">{formatCurrency(activeUser.quota)}</span>
                       {' '}
