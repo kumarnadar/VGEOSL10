@@ -10,7 +10,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { UserPicker } from '@/components/user-picker'
-import { Pencil } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -133,6 +143,8 @@ export function GroupsTab() {
   const [geography, setGeography] = useState('US')
   const [cadence, setCadence] = useState('weekly')
   const [editingGroup, setEditingGroup] = useState<any | null>(null)
+  const [deletingGroup, setDeletingGroup] = useState<any | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const { data: groups } = useSWR('admin-groups', async () => {
     const { data } = await supabase
@@ -172,6 +184,30 @@ export function GroupsTab() {
     }
     toast.success('Member removed')
     mutate('admin-groups')
+  }
+
+  async function handleDeleteGroup() {
+    if (!deletingGroup) return
+    setDeleting(true)
+    // Remove all members first, then delete group
+    const { error: membersError } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('group_id', deletingGroup.id)
+    if (membersError) {
+      toast.error('Failed to remove group members')
+      setDeleting(false)
+      return
+    }
+    const { error } = await supabase.from('groups').delete().eq('id', deletingGroup.id)
+    setDeleting(false)
+    if (error) {
+      toast.error('Failed to delete group')
+    } else {
+      toast.success(`Group "${deletingGroup.name}" deleted`)
+      setDeletingGroup(null)
+      mutate('admin-groups')
+    }
   }
 
   return (
@@ -231,10 +267,16 @@ export function GroupsTab() {
               <h3 className="font-semibold">{group.name}</h3>
               <p className="text-sm text-muted-foreground">{group.description} | {group.geography} | {group.meeting_cadence} | {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][group.meeting_day ?? 4]}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setEditingGroup(group)}>
-              <Pencil className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setEditingGroup(group)}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeletingGroup(group)}>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </div>
           </div>
           <Table>
             <TableHeader>
@@ -277,6 +319,29 @@ export function GroupsTab() {
           onOpenChange={(open) => { if (!open) setEditingGroup(null) }}
         />
       )}
+
+      <AlertDialog open={!!deletingGroup} onOpenChange={(open) => { if (!open) setDeletingGroup(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{deletingGroup?.name}</strong> and remove all
+              member assignments. Scorecard data and other records linked to this group will not
+              be deleted but may lose their group association. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteGroup}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete Group'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
