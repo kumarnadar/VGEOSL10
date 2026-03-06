@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { sendEmail } from '@/lib/mailer'
+import { inviteEmail } from '@/lib/email-templates/invite'
 
 export async function POST(request: Request) {
   const body = await request.json()
@@ -67,21 +69,43 @@ export async function POST(request: Request) {
     serviceRoleKey
   )
 
-  // Invite user
-  const { data: inviteData, error: inviteError } =
-    await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName },
+  // Generate invite link — Supabase does NOT send the email
+  const { data: linkData, error: linkError } =
+    await adminClient.auth.admin.generateLink({
+      type: 'invite',
+      email,
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+        data: { full_name: fullName },
+      },
     })
 
-  if (inviteError) {
-    console.error('[invite] Supabase invite error:', inviteError.message, inviteError)
+  if (linkError) {
+    console.error('[invite] generateLink error:', linkError.message, linkError)
     return NextResponse.json(
-      { success: false, error: `Invite failed: ${inviteError.message}` },
+      { success: false, error: `Invite failed: ${linkError.message}` },
       { status: 500 }
     )
   }
 
-  const newUserId = inviteData.user.id
+  const newUserId = linkData.user.id
+
+  // Look up admin's name for the email
+  const { data: adminProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+
+  const adminName = adminProfile?.full_name || 'Your administrator'
+
+  // Send branded invite email via Nodemailer
+  const { subject, html } = inviteEmail({
+    name: fullName,
+    adminName,
+    inviteLinkUrl: linkData.properties.action_link,
+  })
+  await sendEmail({ to: email, subject, html })
 
   // Update profile with additional fields
   const profileUpdates: Record<string, string> = {}
