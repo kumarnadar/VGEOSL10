@@ -61,13 +61,23 @@ function LoginPageContent() {
   // Handle magic link tokens in URL hash (e.g., #access_token=...)
   useEffect(() => {
     const hash = window.location.hash
-    if (hash && hash.includes('access_token')) {
+    if (!hash || !hash.includes('access_token')) return
+
+    const params = new URLSearchParams(hash.substring(1))
+    const accessToken = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
+
+    if (accessToken && refreshToken) {
       const supabase = createClient()
-      supabase.auth.onAuthStateChange((event) => {
-        if (event === 'SIGNED_IN') {
-          router.replace('/dashboard')
-        }
-      })
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (!error) {
+            router.replace('/dashboard')
+          } else {
+            console.error('[login] setSession error:', error.message)
+            setMessage('Login failed. Please try again.')
+          }
+        })
     }
   }, [router])
 
