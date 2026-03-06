@@ -3,7 +3,6 @@
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -56,25 +55,30 @@ function LoginPageContent() {
   const [message, setMessage] = useState('')
   const searchParams = useSearchParams()
   const isDeactivated = searchParams.get('deactivated') === 'true'
-  const supabase = createClient()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setMessage('')
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const res = await fetch('/api/auth/send-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
 
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setMessage('Check your email for the login link.')
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMessage(data.error || 'Something went wrong. Please try again.')
+      } else {
+        setMessage('Check your email for the login link.')
+      }
+    } catch {
+      setMessage('Unable to send login link. Please try again.')
     }
+
     setLoading(false)
   }
 
