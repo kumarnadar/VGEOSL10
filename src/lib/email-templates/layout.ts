@@ -104,8 +104,8 @@ export function emailLayout({ content, showUnsubscribe = false }: EmailLayoutOpt
 export function ctaButton(text: string, url: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto;">
     <tr>
-      <td style="border-radius:6px;background-color:#ef473a;">
-        <a href="${url}" target="_blank" style="display:inline-block;padding:12px 32px;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;background-color:#ef473a;letter-spacing:0.2px;">${text}</a>
+      <td style="border-radius:6px;background-color:#1a5caa;">
+        <a href="${url}" target="_blank" style="display:inline-block;padding:10px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;background-color:#1a5caa;letter-spacing:0.2px;">${text}</a>
       </td>
     </tr>
   </table>`

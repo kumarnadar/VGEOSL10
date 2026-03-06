@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,6 +56,20 @@ function LoginPageContent() {
   const [message, setMessage] = useState('')
   const searchParams = useSearchParams()
   const isDeactivated = searchParams.get('deactivated') === 'true'
+  const router = useRouter()
+
+  // Handle magic link tokens in URL hash (e.g., #access_token=...)
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token')) {
+      const supabase = createClient()
+      supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN') {
+          router.replace('/dashboard')
+        }
+      })
+    }
+  }, [router])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
