@@ -10,6 +10,7 @@ import { GroupsTab } from '@/components/settings/groups-tab'
 import { ScorecardTab } from '@/components/settings/scorecard-tab'
 import { MeetingsTab } from '@/components/settings/meetings-tab'
 import { AuditTab } from '@/components/settings/audit-tab'
+import { NotificationToggle } from '@/components/settings/notification-toggle'
 
 export default function SettingsPage() {
   const supabase = createClient()
@@ -52,6 +53,7 @@ export default function SettingsPage() {
           </TabsList>
 
           <TabsContent value="system" className="space-y-8 mt-6">
+            <NotificationToggle />
             <UsersTab />
             <div className="border-t pt-8">
               <QuartersTab />
