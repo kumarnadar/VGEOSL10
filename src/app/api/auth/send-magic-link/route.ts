@@ -6,7 +6,7 @@ import { magicLinkEmail } from '@/lib/email-templates/magic-link'
 // Simple in-memory rate limiter: map of email -> timestamps
 const rateLimitMap = new Map<string, number[]>()
 const RATE_LIMIT_WINDOW = 5 * 60 * 1000 // 5 minutes
-const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_MAX = 5
 
 function isRateLimited(email: string): boolean {
   const now = Date.now()
