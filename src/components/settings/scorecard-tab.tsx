@@ -241,11 +241,29 @@ function GoalsSection({ groupId }: { groupId: string }) {
         }
       }
 
-      const hasThresholdChanges = Object.keys(editedThresholds).length > 0
-      if (changedEntries.length === 0 && !hasThresholdChanges) {
+      // Save threshold-only changes (rows where goal value was NOT also changed)
+      const alreadySaved = new Set(changedEntries.map(([id]) => id))
+      let thresholdOnlySaves = 0
+      for (const measureId of Object.keys(editedThresholds)) {
+        if (alreadySaved.has(measureId)) continue
+        const existing = goalByMeasure[measureId]
+        if (!existing) continue // cannot save thresholds without a goal record
+        const { error } = await supabase
+          .from('scorecard_goals')
+          .update({
+            threshold_green: parseInt(getThresholdValue(measureId, 'green')) || 90,
+            threshold_yellow: parseInt(getThresholdValue(measureId, 'yellow')) || 50,
+          })
+          .eq('id', existing.id)
+        if (error) throw error
+        thresholdOnlySaves++
+      }
+
+      const totalChanges = changedEntries.length + thresholdOnlySaves
+      if (totalChanges === 0) {
         toast.info('No changes to save')
       } else {
-        toast.success(`Saved ${changedEntries.length} goal(s)`)
+        toast.success(`Saved ${totalChanges} change(s)`)
         setEditedGoals({})
         setEditedThresholds({})
         mutate(`scorecard-goals-${groupId}-${quarter}`)

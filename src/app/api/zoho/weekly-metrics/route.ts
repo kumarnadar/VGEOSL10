@@ -108,11 +108,11 @@ export async function GET(request: NextRequest) {
         `((Stage:equals:Prepare Proposal)or(Stage:equals:Presenting Proposal))and(Modified_Time:between:${window.start},${window.end})`
       ).catch(() => [] as ZohoRecord[]),
 
-      // Metrics 6 & 7: Deals Won + Lost this week (single query, split by Stage in JS)
+      // Metrics 6 & 7: Deals Won + Lost this week (by Closing_Date, not Modified_Time)
       searchRecords(
         'Deals',
         'Deal_Name,Account_Name,Amount,Stage,Owner,Closing_Date,Modified_Time',
-        `((Stage:equals:Closed Won)or(Stage:equals:Closed Lost))and(Modified_Time:between:${window.start},${window.end})`
+        `((Stage:equals:Closed Won)or(Stage:equals:Closed Lost))and(Closing_Date:between:${window.start},${window.end})`
       ).catch(() => [] as ZohoRecord[]),
     ])
 
